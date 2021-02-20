@@ -1,0 +1,9 @@
+# Python garbage
+.DS_Store
+.idea/
+__pycache__
+
+# Data
+.texpadtmp/
+data/
+save/
