@@ -6,4 +6,7 @@ __pycache__
 # Data
 .texpadtmp/
 data/
-save/
+
+# Model logs
+events.out.tfevents.*
+*.tar
