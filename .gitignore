@@ -7,6 +7,5 @@ __pycache__
 .texpadtmp/
 data/
 
-# Model logs
-events.out.tfevents.*
+# Large model logs
 *.tar
