@@ -28,8 +28,9 @@ class BiDAF(nn.Module):
         word_vectors (torch.Tensor): Pre-trained word vectors.
         hidden_size (int): Number of features in the hidden state at each layer.
         drop_prob (float): Dropout probability.
+        rnn_type (str): RNN architecture used for encoder layer; one of 'LSTM' or 'GRU'.
     """
-    def __init__(self, word_vectors, hidden_size, drop_prob=0.):
+    def __init__(self, word_vectors, hidden_size, drop_prob=0., rnn_type='LSTM'):
         super(BiDAF, self).__init__()
         self.emb = layers.Embedding(word_vectors=word_vectors,
                                     hidden_size=hidden_size,
@@ -38,7 +39,8 @@ class BiDAF(nn.Module):
         self.enc = layers.RNNEncoder(input_size=hidden_size,
                                      hidden_size=hidden_size,
                                      num_layers=1,
-                                     drop_prob=drop_prob)
+                                     drop_prob=drop_prob,
+                                     rnn_type=rnn_type)
 
         self.att = layers.BiDAFAttention(hidden_size=2 * hidden_size,
                                          drop_prob=drop_prob)
@@ -46,10 +48,12 @@ class BiDAF(nn.Module):
         self.mod = layers.RNNEncoder(input_size=8 * hidden_size,
                                      hidden_size=hidden_size,
                                      num_layers=2,
-                                     drop_prob=drop_prob)
+                                     drop_prob=drop_prob,
+                                     rnn_type=rnn_type)
 
         self.out = layers.BiDAFOutput(hidden_size=hidden_size,
-                                      drop_prob=drop_prob)
+                                      drop_prob=drop_prob,
+                                      rnn_type=rnn_type)
 
     def forward(self, cw_idxs, qw_idxs):
         c_mask = torch.zeros_like(cw_idxs) != cw_idxs

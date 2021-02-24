@@ -146,6 +146,9 @@ def get_train_args():
     else:
         raise ValueError(f'Unrecognized metric name: "{args.metric_name}"')
 
+    if args.rnn_type not in ('LSTM', 'GRU'):
+        raise ValueError(f'Unrecognized RNN type: "{args.rnn_type}"')
+
     return args
 
 
@@ -242,3 +245,9 @@ def add_train_test_args(parser):
                         type=str,
                         default=None,
                         help='Path to load as a model checkpoint.')
+    # Add parser argument for RNN type
+    parser.add_argument('--rnn_type',
+                        type=str,
+                        default='LSTM',
+                        choices=('LSTM', 'GRU'),
+                        help='RNN encoder type for the RNNEncoder layer.')
