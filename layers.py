@@ -79,18 +79,31 @@ class RNNEncoder(nn.Module):
         hidden_size (int): Size of the RNN hidden state.
         num_layers (int): Number of layers of RNN cells to use.
         drop_prob (float): Probability of zero-ing out activations.
+        rnn_type (str): RNN architecture used for encoder layer; one of 'LSTM' or 'GRU'.
     """
     def __init__(self,
                  input_size,
                  hidden_size,
                  num_layers,
-                 drop_prob=0.):
+                 drop_prob=0.,
+                 rnn_type='LSTM'):
         super(RNNEncoder, self).__init__()
         self.drop_prob = drop_prob
-        self.rnn = nn.LSTM(input_size, hidden_size, num_layers,
-                           batch_first=True,
-                           bidirectional=True,
-                           dropout=drop_prob if num_layers > 1 else 0.)
+        self.rnn_type = rnn_type
+
+        # Add option to choose RNN type
+        if self.rnn_type == 'LSTM':
+            self.rnn = nn.LSTM(input_size, hidden_size, num_layers,
+                               batch_first=True,
+                               bidirectional=True,
+                               dropout=drop_prob if num_layers > 1 else 0.)
+        elif self.rnn_type == 'GRU':
+            self.rnn = nn.GRU(input_size, hidden_size, num_layers,
+                              batch_first=True,
+                              bidirectional=True,
+                              dropout=drop_prob if num_layers > 1 else 0.)
+        else:
+            print('Unrecognized RNN type!')
 
     def forward(self, x, lengths):
         # Save original padded length for use by pad_packed_sequence
@@ -195,8 +208,9 @@ class BiDAFOutput(nn.Module):
     Args:
         hidden_size (int): Hidden size used in the BiDAF model.
         drop_prob (float): Probability of zero-ing out activations.
+        rnn_type (str): RNN architecture used for encoder layer; one of 'LSTM' or 'GRU'.
     """
-    def __init__(self, hidden_size, drop_prob):
+    def __init__(self, hidden_size, drop_prob, rnn_type):
         super(BiDAFOutput, self).__init__()
         self.att_linear_1 = nn.Linear(8 * hidden_size, 1)
         self.mod_linear_1 = nn.Linear(2 * hidden_size, 1)
@@ -204,7 +218,8 @@ class BiDAFOutput(nn.Module):
         self.rnn = RNNEncoder(input_size=2 * hidden_size,
                               hidden_size=hidden_size,
                               num_layers=1,
-                              drop_prob=drop_prob)
+                              drop_prob=drop_prob,
+                              rnn_type=rnn_type)
 
         self.att_linear_2 = nn.Linear(8 * hidden_size, 1)
         self.mod_linear_2 = nn.Linear(2 * hidden_size, 1)
