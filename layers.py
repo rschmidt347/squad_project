@@ -89,15 +89,14 @@ class RNNEncoder(nn.Module):
                  rnn_type='LSTM'):
         super(RNNEncoder, self).__init__()
         self.drop_prob = drop_prob
-        self.rnn_type = rnn_type
 
         # Add option to choose RNN type
-        if self.rnn_type == 'LSTM':
+        if rnn_type == 'LSTM':
             self.rnn = nn.LSTM(input_size, hidden_size, num_layers,
                                batch_first=True,
                                bidirectional=True,
                                dropout=drop_prob if num_layers > 1 else 0.)
-        elif self.rnn_type == 'GRU':
+        elif rnn_type == 'GRU':
             self.rnn = nn.GRU(input_size, hidden_size, num_layers,
                               batch_first=True,
                               bidirectional=True,
