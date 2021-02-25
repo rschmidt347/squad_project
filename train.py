@@ -52,6 +52,7 @@ def main(args):
                       drop_prob=args.drop_prob,
                       rnn_type=args.rnn_type,
                       num_mod_layers=args.num_mod_layers)
+    # Model with additional input features
     else:
         # Generate feature dictionary
         examples = util.torch_from_json(args.features_file)
