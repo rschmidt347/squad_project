@@ -245,9 +245,15 @@ def add_train_test_args(parser):
                         type=str,
                         default=None,
                         help='Path to load as a model checkpoint.')
-    # Add parser argument for RNN type
+    # New parser arguments
+    # - RNN type: (LSTM, GRU)
     parser.add_argument('--rnn_type',
                         type=str,
                         default='LSTM',
                         choices=('LSTM', 'GRU'),
                         help='RNN encoder type for the RNNEncoder layer.')
+    # - Number of encoder model hidden layers
+    parser.add_argument('--num_mod_layers',
+                        type=int,
+                        default=2,
+                        help='Number of RNN layers in encoder "mod" modeling layer.')
