@@ -159,10 +159,11 @@ def get_test_args():
     add_common_args(parser)
     add_train_test_args(parser)
 
+    # Change dev -> val for GradeScope
     parser.add_argument('--split',
                         type=str,
-                        default='dev',
-                        choices=('train', 'dev', 'test'),
+                        default='val',
+                        choices=('train', 'val', 'test'),
                         help='Split to use for testing.')
     parser.add_argument('--sub_file',
                         type=str,
