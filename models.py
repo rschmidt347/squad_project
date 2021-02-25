@@ -74,3 +74,4 @@ class BiDAF(nn.Module):
         out = self.out(att, mod, c_mask)  # 2 tensors, each (batch_size, c_len)
 
         return out
+
