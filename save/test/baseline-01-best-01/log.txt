@@ -1,0 +1,30 @@
+[02.25.21 05:15:22] Args: {
+    "batch_size": 64,
+    "char_emb_file": "./data/char_emb.json",
+    "dev_eval_file": "./data/dev_eval.json",
+    "dev_record_file": "./data/dev.npz",
+    "hidden_size": 100,
+    "load_path": "save/train/baseline-01/best.pth.tar",
+    "max_ans_len": 15,
+    "name": "baseline-01-best",
+    "num_mod_layers": 2,
+    "num_visuals": 10,
+    "num_workers": 4,
+    "rnn_type": "LSTM",
+    "save_dir": "./save/test/baseline-01-best-01",
+    "split": "dev",
+    "sub_file": "submission.csv",
+    "test_eval_file": "./data/test_eval.json",
+    "test_record_file": "./data/test.npz",
+    "train_eval_file": "./data/train_eval.json",
+    "train_record_file": "./data/train.npz",
+    "use_squad_v2": true,
+    "word_emb_file": "./data/word_emb.json"
+}
+[02.25.21 05:15:22] Loading embeddings...
+[02.25.21 05:15:29] Building model...
+[02.25.21 05:15:40] Loading checkpoint from save/train/baseline-01/best.pth.tar...
+[02.25.21 05:15:44] Building dataset...
+[02.25.21 05:15:55] Evaluating on dev split...
+[02.25.21 05:16:05] Dev NLL: 03.03, F1: 61.36, EM: 58.19, AvNA: 68.14
+[02.25.21 05:16:06] Writing submission file to ./save/test/baseline-01-best-01/dev_submission.csv...

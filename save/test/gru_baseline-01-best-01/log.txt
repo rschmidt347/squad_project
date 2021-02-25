@@ -1,0 +1,30 @@
+[02.25.21 05:17:28] Args: {
+    "batch_size": 64,
+    "char_emb_file": "./data/char_emb.json",
+    "dev_eval_file": "./data/dev_eval.json",
+    "dev_record_file": "./data/dev.npz",
+    "hidden_size": 100,
+    "load_path": "save/train/gru_baseline-01/best.pth.tar",
+    "max_ans_len": 15,
+    "name": "gru_baseline-01-best",
+    "num_mod_layers": 2,
+    "num_visuals": 10,
+    "num_workers": 4,
+    "rnn_type": "GRU",
+    "save_dir": "./save/test/gru_baseline-01-best-01",
+    "split": "dev",
+    "sub_file": "submission.csv",
+    "test_eval_file": "./data/test_eval.json",
+    "test_record_file": "./data/test.npz",
+    "train_eval_file": "./data/train_eval.json",
+    "train_record_file": "./data/train.npz",
+    "use_squad_v2": true,
+    "word_emb_file": "./data/word_emb.json"
+}
+[02.25.21 05:17:28] Loading embeddings...
+[02.25.21 05:17:32] Building model...
+[02.25.21 05:17:34] Loading checkpoint from save/train/gru_baseline-01/best.pth.tar...
+[02.25.21 05:17:38] Building dataset...
+[02.25.21 05:17:39] Evaluating on dev split...
+[02.25.21 05:17:48] Dev NLL: 03.06, F1: 60.91, EM: 57.65, AvNA: 67.99
+[02.25.21 05:17:49] Writing submission file to ./save/test/gru_baseline-01-best-01/dev_submission.csv...
