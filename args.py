@@ -258,3 +258,18 @@ def add_train_test_args(parser):
                         type=int,
                         default=2,
                         help='Number of RNN layers in encoder "mod" modeling layer.')
+    # - Flag for use of exact match features
+    parser.add_argument('--use_exact_match',
+                        type=lambda s: s.lower() in ('yes', 'y', 'true', 't', '1'),
+                        default=False,
+                        help='Whether to add exact match features')
+    # - Flag for use of token features (POS, NER, TF)
+    parser.add_argument('--use_token_feat',
+                        type=lambda s: s.lower() in ('yes', 'y', 'true', 't', '1'),
+                        default=False,
+                        help='Whether to token features')
+    # - Path to pre-processed additional features
+    parser.add_argument('--feat_file_path',
+                        type=str,
+                        default=None,
+                        help='Path to file with additional input features.')

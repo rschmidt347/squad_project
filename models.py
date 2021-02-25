@@ -75,3 +75,15 @@ class BiDAF(nn.Module):
 
         return out
 
+class BiDAFWF(BiDAF):
+    """Baseline BiDAF model with additional input features
+
+    Based on the paper:
+    "Reading Wikipedia to Answer Open-Domain Questions"
+    by Danqi Chen, Adam Fisch, Jason Weston & Antoine Bordes
+    (https://arxiv.org/pdf/1704.00051.pdf)
+    """
+    def __init__(self, word_vectors, hidden_size, feature_dict,
+                 drop_prob=0., rnn_type='LSTM', num_mod_layers=2):
+        super(BiDAFWF, self).__init__(word_vectors, hidden_size, drop_prob=0., rnn_type='LSTM', num_mod_layers=2)
+        self.feature_dict = feature_dict
