@@ -162,8 +162,8 @@ def get_test_args():
     # Change dev -> val for GradeScope
     parser.add_argument('--split',
                         type=str,
-                        default='val',
-                        choices=('train', 'val', 'test'),
+                        default='dev',
+                        choices=('train', 'dev', 'test'),
                         help='Split to use for testing.')
     parser.add_argument('--sub_file',
                         type=str,
