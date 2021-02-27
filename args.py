@@ -146,8 +146,12 @@ def get_train_args():
     else:
         raise ValueError(f'Unrecognized metric name: "{args.metric_name}"')
 
+    # Error handling for new arguments at train time
     if args.rnn_type not in ('LSTM', 'GRU'):
-        raise ValueError(f'Unrecognized RNN type: "{args.rnn_type}"')
+        raise ValueError(f'Unrecognized RNN type: "{args.rnn_type}" - pick "LSTM" or "GRU"')
+
+    if args.use_char_embeddings not in ('yes', 'no'):
+        raise ValueError(f'Unrecognized flag for char embeddings: "{args.rnn_type}" - pick "yes" or "no"')
 
     return args
 
@@ -174,6 +178,13 @@ def get_test_args():
     args = parser.parse_args()
     if not args.load_path:
         raise argparse.ArgumentError('Missing required argument --load_path')
+
+    # Error handling for new arguments at test time
+    if args.rnn_type not in ('LSTM', 'GRU'):
+        raise ValueError(f'Unrecognized RNN type: "{args.rnn_type}" - pick "LSTM" or "GRU"')
+
+    if args.use_char_embeddings not in ('yes', 'no'):
+        raise ValueError(f'Unrecognized flag for char embeddings: "{args.rnn_type}" - pick "yes" or "no"')
 
     return args
 
@@ -258,3 +269,9 @@ def add_train_test_args(parser):
                         type=int,
                         default=2,
                         help='Number of RNN layers in encoder "mod" modeling layer.')
+    # - Yes/no flag to use character embeddings
+    parser.add_argument('--use_char_embeddings',
+                        type=str,
+                        default='no',
+                        choices=('yes', 'no'),
+                        help='Yes/no to use character embeddings in the BiDAF model.')

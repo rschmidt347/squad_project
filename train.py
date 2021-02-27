@@ -43,10 +43,14 @@ def main(args):
     # Get embeddings
     log.info('Loading embeddings...')
     word_vectors = util.torch_from_json(args.word_emb_file)
+    # Option to use character embeddings
+    if args.use_char_embeddings == 'yes':
+        char_vectors = util.torch_from_json(args.char_emb_file)
 
     # Get model
     log.info('Building model...')
     model = BiDAF(word_vectors=word_vectors,
+                  char_vectors=char_vectors if args.use_char_embeddings == 'yes' else None,
                   hidden_size=args.hidden_size,
                   drop_prob=args.drop_prob,
                   rnn_type=args.rnn_type,
