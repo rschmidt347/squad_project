@@ -1,0 +1,30 @@
+[02.26.21 18:43:32] Args: {
+    "batch_size": 64,
+    "char_emb_file": "./data/char_emb.json",
+    "dev_eval_file": "./data/dev_eval.json",
+    "dev_record_file": "./data/dev.npz",
+    "hidden_size": 100,
+    "load_path": "save/train/lstm_4-layer-01/best.pth.tar",
+    "max_ans_len": 15,
+    "name": "lstm_4-layer-best",
+    "num_mod_layers": 4,
+    "num_visuals": 10,
+    "num_workers": 4,
+    "rnn_type": "LSTM",
+    "save_dir": "./save/test/lstm_4-layer-best-01",
+    "split": "dev",
+    "sub_file": "submission.csv",
+    "test_eval_file": "./data/test_eval.json",
+    "test_record_file": "./data/test.npz",
+    "train_eval_file": "./data/train_eval.json",
+    "train_record_file": "./data/train.npz",
+    "use_squad_v2": true,
+    "word_emb_file": "./data/word_emb.json"
+}
+[02.26.21 18:43:32] Loading embeddings...
+[02.26.21 18:43:36] Building model...
+[02.26.21 18:43:38] Loading checkpoint from save/train/lstm_4-layer-01/best.pth.tar...
+[02.26.21 18:43:38] Building dataset...
+[02.26.21 18:43:49] Evaluating on dev split...
+[02.26.21 18:44:04] Dev NLL: 03.08, F1: 61.22, EM: 57.96, AvNA: 68.22
+[02.26.21 18:44:05] Writing submission file to ./save/test/lstm_4-layer-best-01/dev_submission.csv...
