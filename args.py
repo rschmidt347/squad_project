@@ -290,32 +290,32 @@ def get_add_feat_args(parser):
                         type=str,
                         default='./data/test_with_feat.json')
 
-    parser.add_argument('--train_rec_add_file',
+    parser.add_argument('--train_w_add_rec_file',
                         type=str,
-                        default='./data/train_w_add.npz')
-    parser.add_argument('--dev_rec_add_file',
+                        default='./data/train_w_add_rec.npz')
+    parser.add_argument('--dev_w_add_rec_file',
                         type=str,
-                        default='./data/dev_w_add.npz')
-    parser.add_argument('--test_rec_add_file',
+                        default='./data/dev_w_add_rec.npz')
+    parser.add_argument('--test_w_add_rec_file',
                         type=str,
-                        default='./data/test_w_add.npz')
+                        default='./data/test_w_add_rec.npz')
 
-    parser.add_argument('--train_eval_w_add_file',
+    parser.add_argument('--train_w_add_eval_file',
                         type=str,
-                        default='./data/train_eval_w_add.json')
-    parser.add_argument('--dev_eval_w_add_file',
+                        default='./data/train_w_add_eval.json')
+    parser.add_argument('--dev_w_add_eval_file',
                         type=str,
-                        default='./data/dev_eval_w_add.json')
-    parser.add_argument('--test_eval_w_add_file',
+                        default='./data/dev_w_add_eval.json')
+    parser.add_argument('--test_w_add_eval_file',
                         type=str,
-                        default='./data/test_eval_w_add.json')
+                        default='./data/test_w_add_eval.json')
 
-    parser.add_argument('--dev_meta_w_add_file',
+    parser.add_argument('--dev_w_add_meta_file',
                         type=str,
-                        default='./data/dev_meta_w_add.json')
+                        default='./data/dev_w_add_meta.json')
     parser.add_argument('--test_meta_w_add_file',
                         type=str,
-                        default='./data/test_meta_w_add.json')
+                        default='./data/test_w_add_meta.json')
 
     parser.add_argument('--ner2idx_file',
                         type=str,
