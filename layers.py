@@ -20,30 +20,55 @@ class Embedding(nn.Module):
     Args:
         word_vectors (torch.Tensor): Pre-trained word vectors.
         hidden_size (int): Size of hidden activations.
-        drop_prob (float): Probability of zero-ing out activations
-        char_vectors (torch.Tensor): Pre-trained character vectors.
+        drop_prob (float): Probability of zero-ing out activations.
+        use_char_embeddings (bool): Flag for whether or not to include character embeddings.
     """
-    def __init__(self, word_vectors, hidden_size, drop_prob, char_vectors=None):
+    def __init__(self, word_vectors, hidden_size, drop_prob, use_char_embeddings=False):
         super(Embedding, self).__init__()
         self.drop_prob = drop_prob
+        self.use_char_embeddings = use_char_embeddings
         self.embed = nn.Embedding.from_pretrained(word_vectors)
-        if char_vectors is not None:
-            self.use_char_embeddings = True  # flag for forward pass
-            self.char_embed = nn.Embedding.from_pretrained(char_vectors)
-            self.proj = nn.Linear(word_vectors.size(1) + char_vectors.size(1), hidden_size, bias=False)
-        else:
-            self.use_char_embeddings = False  # flag for forward pass
-            self.proj = nn.Linear(word_vectors.size(1), hidden_size, bias=False)
-        self.hwy = HighwayEncoder(2, hidden_size)
+        self.proj = nn.Linear(word_vectors.size(1), hidden_size, bias=False)
+        # self.hwy = HighwayEncoder(2, hidden_size)
 
     def forward(self, x):
         emb = self.embed(x)   # (batch_size, seq_len, embed_size)
-        if self.use_char_embeddings:
-            char_emb = self.char_embed(x)  # (batch_size, seq_len, char_embed_size)
-            emb = torch.cat([emb, char_emb], dim=2)  # (batch_size, seq_len, embed_size + char_embed_size)
         emb = F.dropout(emb, self.drop_prob, self.training)
         emb = self.proj(emb)  # (batch_size, seq_len, hidden_size)
-        emb = self.hwy(emb)   # (batch_size, seq_len, hidden_size)
+        # emb = self.hwy(emb)   # (batch_size, seq_len, hidden_size)
+
+        return emb
+
+class CharEmbedding(nn.Module):
+    """BiDAF character-level encoding via a CNN.
+
+    Character-level encodings are aggregated to the word level using a CNN.
+    As in the word-level embedding, we project the char-level vectors to refine
+    their representation.
+
+    Args:
+        char_vectors (torch.Tensor): Pre-trained character vectors.
+        hidden_size (int): Size of hidden activations.
+        drop_prob (float): Probability of zero-ing out activations
+    """
+    def __init__(self, char_vectors, hidden_size, drop_prob, kernel_size):
+        super(CharEmbedding, self).__init__()
+        self.drop_prob = drop_prob
+        self.kernel_size = kernel_size
+        self.embed = nn.Embedding.from_pretrained(char_vectors)
+        self.conv = nn.Conv1d(in_channels=char_vectors.size(1),
+                              out_channels=self.hidden_size,
+                              kernel_size=self.kernel_size,
+                              bias=False)
+        # TODO self.max_pool = nn.MaxPool1d(...) ??
+        # TODO self.proj = nn.Linear(char_vectors.size(1), hidden_size, bias=False)
+
+    def forward(self, x):
+        # x input: (batch_size, seq_len, max_word_len)
+        x = x.view(x.shape[0], x.shape[1]*x.shape[2])  # (batch_size, seq_len * max_word_len) ?
+        emb = self.embed(x)   # (batch_size, seq_len * max_word_len, embed_size) ?
+        # emb = self.proj(emb)  ??
+        # Want final output to be: (batch_size, seq_len, hidden_size) to match word emb layer
 
         return emb
 
