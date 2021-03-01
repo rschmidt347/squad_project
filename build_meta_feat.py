@@ -31,8 +31,8 @@ def load_pos_ner():
 
 
 def fix_quotes(token_list):
-    token_list = ['" ' if token == "''" else token for token in token_list]
-    token_list = ['" ' if token == "``" else token for token in token_list]
+    token_list = ['"' if token == "''" else token for token in token_list]
+    token_list = ['"' if token == "``" else token for token in token_list]
     return token_list
 
 
