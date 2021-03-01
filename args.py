@@ -259,7 +259,6 @@ def add_train_test_args(parser):
                         default=2,
                         help='Number of RNN layers in encoder "mod" modeling layer.')
 
-
     # - Flag for use of exact match features
     parser.add_argument('--use_exact_match',
                         type=lambda s: s.lower() in ('yes', 'y', 'true', 't', '1'),

@@ -105,7 +105,7 @@ def process_file_w_add(filename, data_type, word_counter, char_counter):
     return examples, eval_examples
 
 
-def build_features_added(args, examples, data_type, out_file, word2idx_dict, char2idx_dict,
+def build_feat_w_add(args, examples, data_type, out_file, word2idx_dict, char2idx_dict,
                          ner2idx_dict, pos2idx_dict, is_test=False):
     para_limit = args.test_para_limit if is_test else args.para_limit
     ques_limit = args.test_ques_limit if is_test else args.ques_limit
@@ -245,7 +245,7 @@ def build_features_added(args, examples, data_type, out_file, word2idx_dict, cha
     return meta
 
 
-def pre_process(args):
+def pre_process_w_add(args):
     # Process training set and use it to decide on the word/character vocabularies
     word_counter, char_counter = Counter(), Counter()
     train_examples, train_eval = process_file_w_add(args.train_w_add_file, "train", word_counter, char_counter)
@@ -261,15 +261,15 @@ def pre_process(args):
 
     # Process dev and test sets
     dev_examples, dev_eval = process_file_w_add(args.dev_w_add_file, "dev", word_counter, char_counter)
-    build_features_added(args, train_examples, "train", args.train_rec_add_file, word2idx_dict, char2idx_dict,
-                         ner2idx_dict, pos2idx_dict)
-    dev_meta = build_features_added(args, dev_examples, "dev", args.dev_rec_add_file, word2idx_dict, char2idx_dict,
-                                    ner2idx_dict, pos2idx_dict)
+    build_feat_w_add(args, train_examples, "train", args.train_rec_add_file, word2idx_dict, char2idx_dict,
+                     ner2idx_dict, pos2idx_dict)
+    dev_meta = build_feat_w_add(args, dev_examples, "dev", args.dev_rec_add_file, word2idx_dict, char2idx_dict,
+                                ner2idx_dict, pos2idx_dict)
     if args.include_test_examples:
         test_examples, test_eval = process_file_w_add(args.test_w_add_file, "test", word_counter, char_counter)
         save(args.test_eval_w_add_file, test_eval, message="test eval w add")
-        test_meta = build_features_added(args, test_examples, "test", args.test_rec_add_file,
-                                         word2idx_dict, char2idx_dict, ner2idx_dict, pos2idx_dict, is_test=True)
+        test_meta = build_feat_w_add(args, test_examples, "test", args.test_rec_add_file,
+                                     word2idx_dict, char2idx_dict, ner2idx_dict, pos2idx_dict, is_test=True)
         save(args.test_meta_w_add_file, test_meta, message="test meta w add")
 
     save(args.train_eval_w_add_file, train_eval, message="train eval w add")
@@ -287,4 +287,4 @@ if __name__ == '__main__':
     nlp = spacy.blank("en")
 
     # Preprocess dataset
-    pre_process(args_)
+    pre_process_w_add(args_)
