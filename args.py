@@ -282,13 +282,13 @@ def get_add_feat_args(parser):
 
     parser.add_argument('--train_w_add_file',
                         type=str,
-                        default='./data/train_w_add.json')
+                        default='./data/train_with_feat.json')
     parser.add_argument('--dev_w_add_file',
                         type=str,
-                        default='./data/dev_w_add.json')
+                        default='./data/dev_with_feat.json')
     parser.add_argument('--test_w_add_file',
                         type=str,
-                        default='./data/test_w_add.json')
+                        default='./data/test_with_feat.json')
 
     parser.add_argument('--train_rec_add_file',
                         type=str,
