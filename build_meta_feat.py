@@ -261,22 +261,22 @@ def pre_process_w_add(args):
 
     # Process dev and test sets
     dev_examples, dev_eval = process_file_w_add(args.dev_w_add_file, "dev", word_counter, char_counter)
-    build_feat_w_add(args, train_examples, "train", args.train_rec_add_file, word2idx_dict, char2idx_dict,
+    build_feat_w_add(args, train_examples, "train", args.train_w_add_rec_file, word2idx_dict, char2idx_dict,
                      ner2idx_dict, pos2idx_dict)
-    dev_meta = build_feat_w_add(args, dev_examples, "dev", args.dev_rec_add_file, word2idx_dict, char2idx_dict,
+    dev_meta = build_feat_w_add(args, dev_examples, "dev", args.dev_w_add_rec_file, word2idx_dict, char2idx_dict,
                                 ner2idx_dict, pos2idx_dict)
     if args.include_test_examples:
         test_examples, test_eval = process_file_w_add(args.test_w_add_file, "test", word_counter, char_counter)
         save(args.test_eval_w_add_file, test_eval, message="test eval w add")
-        test_meta = build_feat_w_add(args, test_examples, "test", args.test_rec_add_file,
+        test_meta = build_feat_w_add(args, test_examples, "test", args.test_w_add_rec_file,
                                      word2idx_dict, char2idx_dict, ner2idx_dict, pos2idx_dict, is_test=True)
-        save(args.test_meta_w_add_file, test_meta, message="test meta w add")
+        save(args.test_w_add_meta_file, test_meta, message="test meta w add")
 
-    save(args.train_eval_w_add_file, train_eval, message="train eval w add")
-    save(args.dev_meta_w_add_file, dev_eval, message="dev eval w add")
+    save(args.train_w_add_eval_file, train_eval, message="train eval w add")
+    save(args.dev_w_add_eval_file, dev_eval, message="dev eval w add")
     save(args.ner2idx_file, ner2idx_dict, message="NER dictionary")
     save(args.pos2idx_file, pos2idx_dict, message="POS dictionary")
-    save(args.dev_meta_w_add_file, dev_meta, message="dev meta w add")
+    save(args.dev_w_add_meta_file, dev_meta, message="dev meta w add")
 
 
 if __name__ == '__main__':
@@ -285,6 +285,8 @@ if __name__ == '__main__':
 
     # Import spacy language model
     nlp = spacy.blank("en")
+
+    print("Start preprocessing data")
 
     # Preprocess dataset
     pre_process_w_add(args_)
