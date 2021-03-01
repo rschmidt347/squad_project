@@ -677,6 +677,42 @@ def compute_avna(prediction, ground_truths):
     return float(bool(prediction) == bool(ground_truths))
 
 
+def build_feature_dict(examples, use_exact_match, use_token_feat):
+    """Index features (one hot) from fields in examples and options.
+
+    Modified from build_feature_dict in DrQA repo:
+    https://github.com/facebookresearch/DrQA/blob/master/drqa/reader/utils.py
+    """
+    def _insert(feature):
+        if feature not in feature_dict:
+            feature_dict[feature] = len(feature_dict)
+
+    feature_dict = {}
+
+    # Exact match features
+    if use_exact_match:
+        _insert('in_question')
+        _insert('in_question_uncased')
+        _insert('in_question_lemma')
+
+    if use_token_feat:
+        # Part of speech tag features
+        for ex in examples:
+            for w in ex['pos']:
+                _insert('pos=%s' % w)
+
+        # Named entity tag features
+        for ex in examples:
+            for w in ex['ner']:
+                _insert('ner=%s' % w)
+
+        # Term frequency feature
+        _insert('tf')
+
+    return feature_dict
+
+
+
 # All methods below this line are from the official SQuAD 2.0 eval script
 # https://worksheets.codalab.org/rest/bundles/0x6b567e1cf2e041ec80d7098f031c5c9e/contents/blob/
 def normalize_answer(s):
@@ -723,3 +759,5 @@ def compute_f1(a_gold, a_pred):
     recall = 1.0 * num_same / len(gold_toks)
     f1 = (2 * precision * recall) / (precision + recall)
     return f1
+
+

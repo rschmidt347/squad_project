@@ -258,3 +258,68 @@ def add_train_test_args(parser):
                         type=int,
                         default=2,
                         help='Number of RNN layers in encoder "mod" modeling layer.')
+
+    # - Flag for use of exact match features
+    parser.add_argument('--use_exact_match',
+                        type=lambda s: s.lower() in ('yes', 'y', 'true', 't', '1'),
+                        default=False,
+                        help='Whether to add exact match features')
+    # - Flag for use of token features (POS, NER, TF)
+    parser.add_argument('--use_token_feat',
+                        type=lambda s: s.lower() in ('yes', 'y', 'true', 't', '1'),
+                        default=False,
+                        help='Whether to token features')
+    # - Path to pre-processed additional features
+    parser.add_argument('--feat_file_path',
+                        type=str,
+                        default=None,
+                        help='Path to file with additional input features.')
+
+
+def get_add_feat_args(parser):
+    """Get args used by build_meta_feat.py"""
+    get_setup_args()
+
+    parser.add_argument('--train_w_add_file',
+                        type=str,
+                        default='./data/train_w_add.json')
+    parser.add_argument('--dev_w_add_file',
+                        type=str,
+                        default='./data/dev_w_add.json')
+    parser.add_argument('--test_w_add_file',
+                        type=str,
+                        default='./data/test_w_add.json')
+
+    parser.add_argument('--train_rec_add_file',
+                        type=str,
+                        default='./data/train_w_add.npz')
+    parser.add_argument('--dev_rec_add_file',
+                        type=str,
+                        default='./data/dev_w_add.npz')
+    parser.add_argument('--test_rec_add_file',
+                        type=str,
+                        default='./data/test_w_add.npz')
+
+    parser.add_argument('--train_eval_w_add_file',
+                        type=str,
+                        default='./data/train_eval_w_add.json')
+    parser.add_argument('--dev_eval_w_add_file',
+                        type=str,
+                        default='./data/dev_eval_w_add.json')
+    parser.add_argument('--test_eval_w_add_file',
+                        type=str,
+                        default='./data/test_eval_w_add.json')
+
+    parser.add_argument('--dev_meta_w_add_file',
+                        type=str,
+                        default='./data/dev_meta_w_add.json')
+    parser.add_argument('--test_meta_w_add_file',
+                        type=str,
+                        default='./data/test_meta_w_add.json')
+
+    parser.add_argument('--ner2idx_file',
+                        type=str,
+                        default='./data/ner2idx.json')
+    parser.add_argument('--pos2idx_file',
+                        type=str,
+                        default='./data/pos2idx.json')

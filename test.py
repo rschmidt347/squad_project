@@ -21,12 +21,12 @@ import util
 from args import get_test_args
 from collections import OrderedDict
 from json import dumps
-from models import BiDAF
+from models import BiDAF, BiDAFWF
 from os.path import join
 from tensorboardX import SummaryWriter
 from tqdm import tqdm
 from ujson import load as json_load
-from util import collate_fn, SQuAD
+from util import collate_fn, SQuAD, build_feature_dict
 
 
 def main(args):
@@ -43,10 +43,24 @@ def main(args):
 
     # Get model
     log.info('Building model...')
-    model = BiDAF(word_vectors=word_vectors,
-                  hidden_size=args.hidden_size,
-                  rnn_type=args.rnn_type,
-                  num_mod_layers=args.num_mod_layers)
+    if not (args.use_exact_match or args.use_token_feat):
+        model = BiDAF(word_vectors=word_vectors,
+                      hidden_size=args.hidden_size,
+                      drop_prob=args.drop_prob,
+                      rnn_type=args.rnn_type,
+                      num_mod_layers=args.num_mod_layers)
+    # Model with additional input features
+    else:
+        # Generate feature dictionary
+        examples = util.torch_from_json(args.features_file)
+        feature_dict = build_feature_dict(examples, args.use_exact_match, args.use_token_feat)
+        model = BiDAFWF(word_vectors=word_vectors,
+                        hidden_size=args.hidden_size,
+                        feature_dict=feature_dict,
+                        drop_prob=args.drop_prob,
+                        rnn_type=args.rnn_type,
+                        num_mod_layers=args.num_mod_layers)
+
     model = nn.DataParallel(model, gpu_ids)
     log.info(f'Loading checkpoint from {args.load_path}...')
     model = util.load_model(model, args.load_path, gpu_ids, return_step=False)

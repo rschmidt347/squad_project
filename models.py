@@ -60,17 +60,31 @@ class BiDAF(nn.Module):
         q_mask = torch.zeros_like(qw_idxs) != qw_idxs
         c_len, q_len = c_mask.sum(-1), q_mask.sum(-1)
 
-        c_emb = self.emb(cw_idxs)         # (batch_size, c_len, hidden_size)
-        q_emb = self.emb(qw_idxs)         # (batch_size, q_len, hidden_size)
+        c_emb = self.emb(cw_idxs)  # (batch_size, c_len, hidden_size)
+        q_emb = self.emb(qw_idxs)  # (batch_size, q_len, hidden_size)
 
-        c_enc = self.enc(c_emb, c_len)    # (batch_size, c_len, 2 * hidden_size)
-        q_enc = self.enc(q_emb, q_len)    # (batch_size, q_len, 2 * hidden_size)
+        c_enc = self.enc(c_emb, c_len)  # (batch_size, c_len, 2 * hidden_size)
+        q_enc = self.enc(q_emb, q_len)  # (batch_size, q_len, 2 * hidden_size)
 
         att = self.att(c_enc, q_enc,
-                       c_mask, q_mask)    # (batch_size, c_len, 8 * hidden_size)
+                       c_mask, q_mask)  # (batch_size, c_len, 8 * hidden_size)
 
-        mod = self.mod(att, c_len)        # (batch_size, c_len, 2 * hidden_size)
+        mod = self.mod(att, c_len)  # (batch_size, c_len, 2 * hidden_size)
 
         out = self.out(att, mod, c_mask)  # 2 tensors, each (batch_size, c_len)
 
         return out
+
+
+class BiDAFWF(BiDAF):
+    """Baseline BiDAF model with additional input features
+
+    Based on the paper:
+    "Reading Wikipedia to Answer Open-Domain Questions"
+    by Danqi Chen, Adam Fisch, Jason Weston & Antoine Bordes
+    (https://arxiv.org/pdf/1704.00051.pdf)
+    """
+    def __init__(self, word_vectors, hidden_size, feature_dict,
+                 drop_prob=0., rnn_type='LSTM', num_mod_layers=2):
+        super(BiDAFWF, self).__init__(word_vectors, hidden_size, drop_prob=0., rnn_type='LSTM', num_mod_layers=2)
+        self.feature_dict = feature_dict
