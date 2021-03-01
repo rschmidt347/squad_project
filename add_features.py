@@ -69,8 +69,10 @@ if __name__ == '__main__':
                         para['lemma'] = row['lemma']
                         para['pos'] = row['pos']
                         para['ner'] = row['ner']
+                        para['context_tokens'] = row['document']
                     for qa in para['qas']:
                         if cur_id == qa['id']:
+                            qa['ques_tokens'] = row['question']
                             qa['qlemma'] = row['qlemma']
                             break
 
