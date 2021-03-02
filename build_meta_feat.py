@@ -213,7 +213,7 @@ def build_feat_w_add(args, examples, data_type, out_file, word2idx_dict, char2id
         for i, token in enumerate(example["context_tokens"]):
             context_idx[i] = _get_word(token)
             # One hot encoding of exact match features
-            exact_orig[i] = 1 if token in example["lemma_tokens"] else 0
+            exact_orig[i] = 1 if token in example["ques_tokens"] else 0
             exact_uncased[i] = 1 if token.lower() in [ex.lower() for ex in example["ques_tokens"]] else 0
             exact_lemma[i] = 1 if example["lemma_tokens"][i] in example["qlemma_tokens"] else 0
         context_idxs.append(context_idx)
