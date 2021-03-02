@@ -80,8 +80,7 @@ def process_file_w_add(filename, data_type, word_counter, char_counter):
         source = json.load(fh)
         for article in tqdm(source["data"]):
             for para in article["paragraphs"]:
-                context = para["context"].replace(
-                    "''", '" ').replace("``", '" ').replace("' '", "' ")
+                context = para["context"].replace("''", '" ').replace("``", '" ').replace("' '", '" ')
 
                 context_tokens, lemma, ner, pos = tokenize_context(para["context_tokens"],
                                                                    para["lemma"],
