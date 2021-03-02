@@ -7,9 +7,10 @@ Author:
 import argparse
 
 
-def get_setup_args():
+def get_setup_args(parser=None):
     """Get arguments needed in setup.py."""
-    parser = argparse.ArgumentParser('Download and pre-process SQuAD')
+    if parser is None:
+        parser = argparse.ArgumentParser('Download and pre-process SQuAD')
 
     add_common_args(parser)
 
@@ -280,7 +281,7 @@ def get_add_feat_args():
     """Get args used by build_meta_feat.py"""
     parser = argparse.ArgumentParser('Pre-process additional features files')
 
-    get_setup_args_w_parser(parser)
+    get_setup_args(parser)
 
     parser.add_argument('--train_w_add_file',
                         type=str,
@@ -329,62 +330,3 @@ def get_add_feat_args():
     args = parser.parse_args()
 
     return args
-
-
-def get_setup_args_w_parser(parser):
-    """Output arguments from setup.py used in build_meta_feat.py"""
-    parser.add_argument('--dev_meta_file',
-                        type=str,
-                        default='./data/dev_meta.json')
-    parser.add_argument('--test_meta_file',
-                        type=str,
-                        default='./data/test_meta.json')
-    parser.add_argument('--word2idx_file',
-                        type=str,
-                        default='./data/word2idx.json')
-    parser.add_argument('--char2idx_file',
-                        type=str,
-                        default='./data/char2idx.json')
-    parser.add_argument('--answer_file',
-                        type=str,
-                        default='./data/answer.json')
-    parser.add_argument('--para_limit',
-                        type=int,
-                        default=400,
-                        help='Max number of words in a paragraph')
-    parser.add_argument('--ques_limit',
-                        type=int,
-                        default=50,
-                        help='Max number of words to keep from a question')
-    parser.add_argument('--test_para_limit',
-                        type=int,
-                        default=1000,
-                        help='Max number of words in a paragraph at test time')
-    parser.add_argument('--test_ques_limit',
-                        type=int,
-                        default=100,
-                        help='Max number of words in a question at test time')
-    parser.add_argument('--char_dim',
-                        type=int,
-                        default=64,
-                        help='Size of char vectors (char-level embeddings)')
-    parser.add_argument('--glove_dim',
-                        type=int,
-                        default=300,
-                        help='Size of GloVe word vectors to use')
-    parser.add_argument('--glove_num_vecs',
-                        type=int,
-                        default=2196017,
-                        help='Number of GloVe vectors')
-    parser.add_argument('--ans_limit',
-                        type=int,
-                        default=30,
-                        help='Max number of words in a training example answer')
-    parser.add_argument('--char_limit',
-                        type=int,
-                        default=16,
-                        help='Max number of chars to keep from a word')
-    parser.add_argument('--include_test_examples',
-                        type=lambda s: s.lower().startswith('t'),
-                        default=True,
-                        help='Process examples from the test set')
