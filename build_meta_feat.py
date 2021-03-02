@@ -30,10 +30,33 @@ def load_pos_ner():
     return ner2idx_dict, pos2idx_dict
 
 
-def fix_quotes(token_list):
-    token_list = ['"' if token == "''" else token for token in token_list]
-    token_list = ['"' if token == "``" else token for token in token_list]
-    return token_list
+def fix_quotes(tokens_list):
+    tokens_list = ['"' if token == "''" else token for token in tokens_list]
+    tokens_list = ['"' if token == "``" else token for token in tokens_list]
+    return tokens_list
+
+
+def tokenize_context(context_list, lemma_list, ner_list, pos_list):
+    context_list = fix_quotes(context_list)
+    lemma_list = fix_quotes(lemma_list)
+
+    assert len(context_list) == len(lemma_list), 'context_list not same length as lemma_list'
+    assert len(context_list) == len(ner_list), 'context_list not same length as ner_list'
+    assert len(context_list) == len(pos_list), 'context_list not same length as pos_list'
+
+    if context_list[0] == ' ':
+        context_list = context_list[1:]
+        lemma_list = lemma_list[1:]
+        ner_list = ner_list[1:]
+        pos_list = pos_list[1:]
+
+    if context_list[-1] == ' ':
+        context_list = context_list[:-1]
+        lemma_list = lemma_list[:-1]
+        ner_list = ner_list[:-1]
+        pos_list = pos_list[:-1]
+
+    return context_list, lemma_list, ner_list, pos_list
 
 
 def process_file_w_add(filename, data_type, word_counter, char_counter):
@@ -47,17 +70,18 @@ def process_file_w_add(filename, data_type, word_counter, char_counter):
             for para in article["paragraphs"]:
                 context = para["context"].replace(
                     "''", '" ').replace("``", '" ')
-                context_tokens = fix_quotes(para["context_tokens"])
+
+                context_tokens, lemma, ner, pos = tokenize_context(para["context_tokens"],
+                                                                   para["lemma"],
+                                                                   para["ner"],
+                                                                   para["pos"])
+
                 context_chars = [list(token) for token in context_tokens]
                 spans = convert_idx(context, context_tokens)
                 for token in context_tokens:
                     word_counter[token] += len(para["qas"])
                     for char in token:
                         char_counter[char] += len(para["qas"])
-
-                lemma = fix_quotes(para["lemma"])
-                ner = para["ner"]
-                pos = para["pos"]
 
                 for qa in para["qas"]:
                     total += 1
