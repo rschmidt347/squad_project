@@ -26,13 +26,13 @@ class BiDAF(nn.Module):
 
     Args:
         word_vectors (torch.Tensor): Pre-trained word vectors.
-        char_vectors (torch.Tensor): Pre-trained character vectors.
         hidden_size (int): Number of features in the hidden state at each layer.
         drop_prob (float): Dropout probability.
         rnn_type (str): RNN architecture used for encoder layer; one of 'LSTM' or 'GRU'.
+        char_vectors (torch.Tensor): Pre-trained character vectors.
     """
-    def __init__(self, word_vectors, char_vectors, hidden_size,
-                 drop_prob=0., rnn_type='LSTM', num_mod_layers=2):
+    def __init__(self, word_vectors, hidden_size,
+                 drop_prob=0., rnn_type='LSTM', num_mod_layers=2, char_vectors=None):
         super(BiDAF, self).__init__()
         # Use character embeddings if fed into the BiDAF model
         self.use_char_embeddings = True if char_vectors is not None else False
