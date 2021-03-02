@@ -11,12 +11,17 @@ from args import get_add_feat_args
 
 
 def load_pos_ner():
-    ner_tags = ['PERSON', 'LOCATION', 'ORGANIZATION', 'MISC', 'MONEY', 'NUMBER', 'ORDINAL',
-                'PERCENT', 'DATE', 'TIME', 'DURATION', 'SET', 'O']
-    pos_tags = ['LS', 'TO', 'VBN', "''", 'WP', 'UH', 'VBG', 'JJ', 'VBZ', '--', 'VBP', 'NN',
-                'DT', 'PRP', ':', 'WP$', 'NNPS', 'PRP$', 'WDT', '-LRB-', '-RRB-', '.', ',', '``',
-                '$', 'RB', 'RBR', 'RBS', 'VBD', 'IN', 'FW', 'RP', 'JJR', 'JJS', 'PDT', 'MD',
-                'VB', 'WRB', 'NNP', 'EX', 'NNS', 'SYM', 'CC', 'CD', 'POS']
+    ner_tags = ['PERSON', 'CARDINAL', 'ORG', 'GPE', 'FAC', 'MONEY', 'NORP', 'DATE', 'TIME', 'ORDINAL', 'PERCENT',
+                'PRODUCT', 'LANGUAGE', 'LOC', 'QUANTITY', 'WORK_OF_ART', 'EVENT', 'LAW', 'PERSON', 'CARDINAL', 'ORG',
+                'GPE', 'FAC', 'MONEY', 'NORP', 'DATE', 'TIME', 'ORDINAL', 'PERCENT', 'PRODUCT', 'LANGUAGE', 'LOC',
+                'QUANTITY', 'WORK_OF_ART', 'EVENT', 'LAW', 'PERSON', 'CARDINAL', 'ORG', 'GPE', 'FAC', 'MONEY', 'NORP',
+                'DATE', 'TIME', 'ORDINAL', 'PERCENT', 'PRODUCT', 'LANGUAGE', 'LOC', 'QUANTITY', 'WORK_OF_ART', 'EVENT',
+                'LAW', 'PERSON', 'CARDINAL', 'ORG', 'GPE', 'FAC', 'MONEY', 'NORP', 'DATE', 'TIME', 'ORDINAL', 'PERCENT',
+                'PRODUCT', 'LANGUAGE', 'LOC', 'QUANTITY', 'WORK_OF_ART', 'EVENT', 'LAW', 'O']
+    pos_tags = ['$', "''", ',', '-LRB-', '-RRB-', '.', ':', 'ADD', 'AFX', 'CC', 'CD', 'DT', 'EX', 'FW', 'HYPH', 'IN',
+                'JJ', 'JJR', 'JJS', 'LS', 'MD', 'NFP', 'NN', 'NNP', 'NNPS', 'NNS', 'PDT', 'POS', 'PRP', 'PRP$', 'RB',
+                'RBR', 'RBS', 'RP', 'SYM', 'TO', 'UH', 'VB', 'VBD', 'VBG', 'VBN', 'VBP', 'VBZ', 'WDT', 'WP', 'WP$',
+                'WRB', 'XX', '_SP', '``']
 
     # Build dictionaries mapping NER and POS to indices
     ner2idx_dict = dict(zip(ner_tags, range(2, len(ner_tags) + 2)))
@@ -55,6 +60,13 @@ def tokenize_context(context_list, lemma_list, ner_list, pos_list):
         lemma_list = lemma_list[:-1]
         ner_list = ner_list[:-1]
         pos_list = pos_list[:-1]
+
+    for i in range(len(context_list) - 1):
+        if context_list[i] == "'" and context_list[i] == "'":
+            context_list = context_list[:i] + ['"'] + context_list[i+2:]
+            lemma_list = lemma_list[:i] + ['"'] + lemma_list[i+2:]
+            ner_list = ner_list[:i] + ['O'] + ner_list[i+2:]
+            pos_list = pos_list[:i] + ['"'] + pos_list[i+2:]
 
     return context_list, lemma_list, ner_list, pos_list
 
