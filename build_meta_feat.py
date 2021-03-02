@@ -141,7 +141,7 @@ def process_file_w_add(filename, data_type, word_counter, char_counter):
 
 
 def build_feat_w_add(args, examples, data_type, out_file, word2idx_dict, char2idx_dict,
-                         ner2idx_dict, pos2idx_dict, is_test=False):
+                     ner2idx_dict, pos2idx_dict, is_test=False):
     para_limit = args.test_para_limit if is_test else args.para_limit
     ques_limit = args.test_ques_limit if is_test else args.ques_limit
     ans_limit = args.ans_limit
@@ -302,7 +302,7 @@ def pre_process_w_add(args):
                                 ner2idx_dict, pos2idx_dict)
     if args.include_test_examples:
         test_examples, test_eval = process_file_w_add(args.test_w_add_file, "test", word_counter, char_counter)
-        save(args.test_eval_w_add_file, test_eval, message="test eval w add")
+        save(args.test_w_add_eval_file, test_eval, message="test eval w add")
         test_meta = build_feat_w_add(args, test_examples, "test", args.test_w_add_rec_file,
                                      word2idx_dict, char2idx_dict, ner2idx_dict, pos2idx_dict, is_test=True)
         save(args.test_w_add_meta_file, test_meta, message="test meta w add")
