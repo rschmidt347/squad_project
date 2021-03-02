@@ -34,20 +34,26 @@ class BiDAF(nn.Module):
     def __init__(self, word_vectors, char_vectors, hidden_size,
                  drop_prob=0., rnn_type='LSTM', num_mod_layers=2):
         super(BiDAF, self).__init__()
+        # Use character embeddings if fed into the BiDAF model
         self.use_char_embeddings = True if char_vectors is not None else False
         self.emb = layers.Embedding(word_vectors=word_vectors,
                                     hidden_size=hidden_size,
-                                    drop_prob=drop_prob,
-                                    use_char_embeddings=self.use_char_embeddings)
+                                    drop_prob=drop_prob)
 
+        # If using character embeddings, feed through char-CNN to get word-level embeddings
         if self.use_char_embeddings:
+            # Using char_out_size = hidden size as in original BiDAF paper
             self.char_emb = layers.CharEmbedding(char_vectors=char_vectors,
-                                                 hidden_size=hidden_size,
+                                                 char_out_size=hidden_size,
                                                  drop_prob=drop_prob)
-            final_hidden_size = 2*hidden_size
+            # If concat [embed, char_embed], then final_hidden_size = hidden_size + char_out_size
+            final_hidden_size = 2 * hidden_size  # since char_out_size = hidden_size
         else:
+            # Otherwise, hidden size just reflects word hidden size = hidden_size
             final_hidden_size = hidden_size
 
+        # Highway Layer now outside of the Embedding layer...
+        # - Allows concatenated word+char vector to be fed into Highway Layer if needed
         self.hwy = layers.HighwayEncoder(num_layers=2,
                                          hidden_size=final_hidden_size)
 
