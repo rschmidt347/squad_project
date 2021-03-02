@@ -316,7 +316,7 @@ def get_add_feat_args():
     parser.add_argument('--dev_w_add_meta_file',
                         type=str,
                         default='./data/dev_w_add_meta.json')
-    parser.add_argument('--test_meta_w_add_file',
+    parser.add_argument('--test_w_add_meta_file',
                         type=str,
                         default='./data/test_w_add_meta.json')
 
