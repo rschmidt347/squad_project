@@ -62,7 +62,7 @@ def tokenize_context(context_list, lemma_list, ner_list, pos_list):
         pos_list = pos_list[:-1]
 
     for i in range(len(context_list) - 1):
-        if context_list[i] == "'" and context_list[i] == "'":
+        if (context_list[i] == "'") and (context_list[i+1] == "'"):
             context_list = context_list[:i] + ['"'] + context_list[i+2:]
             lemma_list = lemma_list[:i] + ['"'] + lemma_list[i+2:]
             ner_list = ner_list[:i] + ['O'] + ner_list[i+2:]
