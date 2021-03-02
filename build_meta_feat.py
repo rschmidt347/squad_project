@@ -44,13 +44,13 @@ def tokenize_context(context_list, lemma_list, ner_list, pos_list):
     assert len(context_list) == len(ner_list), 'context_list not same length as ner_list'
     assert len(context_list) == len(pos_list), 'context_list not same length as pos_list'
 
-    if context_list[0] == ' ':
+    if context_list[0].isspace():
         context_list = context_list[1:]
         lemma_list = lemma_list[1:]
         ner_list = ner_list[1:]
         pos_list = pos_list[1:]
 
-    if context_list[-1] == ' ':
+    if context_list[-1].isspace():
         context_list = context_list[:-1]
         lemma_list = lemma_list[:-1]
         ner_list = ner_list[:-1]
