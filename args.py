@@ -6,7 +6,6 @@ Author:
 
 import argparse
 
-
 def get_setup_args():
     """Get arguments needed in setup.py."""
     parser = argparse.ArgumentParser('Download and pre-process SQuAD')
@@ -146,8 +145,9 @@ def get_train_args():
     else:
         raise ValueError(f'Unrecognized metric name: "{args.metric_name}"')
 
+    # Error handling for new arguments at train time
     if args.rnn_type not in ('LSTM', 'GRU'):
-        raise ValueError(f'Unrecognized RNN type: "{args.rnn_type}"')
+        raise ValueError(f'Unrecognized RNN type: "{args.rnn_type}" - pick "LSTM" or "GRU"')
 
     return args
 
@@ -174,6 +174,10 @@ def get_test_args():
     args = parser.parse_args()
     if not args.load_path:
         raise argparse.ArgumentError('Missing required argument --load_path')
+
+    # Error handling for new arguments at test time
+    if args.rnn_type not in ('LSTM', 'GRU'):
+        raise ValueError(f'Unrecognized RNN type: "{args.rnn_type}" - pick "LSTM" or "GRU"')
 
     return args
 
@@ -258,3 +262,8 @@ def add_train_test_args(parser):
                         type=int,
                         default=2,
                         help='Number of RNN layers in encoder "mod" modeling layer.')
+    # - Flag to use character embeddings
+    parser.add_argument('--use_char_embeddings',
+                        type=bool,
+                        default=False,
+                        help='Flag to use character embeddings in the BiDAF model.')

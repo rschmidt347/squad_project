@@ -11,30 +11,73 @@ import torch.nn.functional as F
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 from util import masked_softmax
 
-
 class Embedding(nn.Module):
     """Embedding layer used by BiDAF, without the character-level component.
 
     Word-level embeddings are further refined using a 2-layer Highway Encoder
     (see `HighwayEncoder` class for details).
+    Note: Highway Encoder refinement now moved to training loop to potentially
+    incorporate character-level word embeddings.
 
     Args:
         word_vectors (torch.Tensor): Pre-trained word vectors.
         hidden_size (int): Size of hidden activations.
-        drop_prob (float): Probability of zero-ing out activations
+        drop_prob (float): Probability of zero-ing out activations.
     """
     def __init__(self, word_vectors, hidden_size, drop_prob):
         super(Embedding, self).__init__()
         self.drop_prob = drop_prob
         self.embed = nn.Embedding.from_pretrained(word_vectors)
         self.proj = nn.Linear(word_vectors.size(1), hidden_size, bias=False)
-        self.hwy = HighwayEncoder(2, hidden_size)
+        # Move hwy layer to train loop to incorporate char encoder
+        # self.hwy = HighwayEncoder(2, hidden_size)
 
     def forward(self, x):
         emb = self.embed(x)   # (batch_size, seq_len, embed_size)
         emb = F.dropout(emb, self.drop_prob, self.training)
         emb = self.proj(emb)  # (batch_size, seq_len, hidden_size)
-        emb = self.hwy(emb)   # (batch_size, seq_len, hidden_size)
+        # Move hwy layer to train loop to incorporate char encoder
+        # emb = self.hwy(emb)   # (batch_size, seq_len, hidden_size)
+
+        return emb
+
+class CharEmbedding(nn.Module):
+    """BiDAF character embedding layer to get character-level word embeddings.
+
+    Character-level encodings are aggregated to the word level using a CNN;
+    our implementation is inspired by the tensorflow implementation of the
+    original BiDAF model.
+
+    Args:
+        char_vectors (torch.Tensor): Pre-trained character vectors.
+        char_out_size (int): Size of aggregated word-level embedding outputs.
+        drop_prob (float): Probability of zero-ing out activations
+    """
+    def __init__(self, char_vectors, char_out_size, drop_prob, kernel_size=5):
+        super(CharEmbedding, self).__init__()
+        self.drop_prob = drop_prob
+        self.kernel_size = kernel_size
+        self.char_out_size = char_out_size
+        self.embed = nn.Embedding.from_pretrained(char_vectors)
+        self.conv = nn.Conv1d(in_channels=char_vectors.size(1),
+                              out_channels=char_out_size,
+                              kernel_size=kernel_size)
+        self.max_pool = nn.AdaptiveMaxPool1d(output_size=1)
+
+    def forward(self, x):
+        # 1. Fetch the character-level embeddings & get shapes
+        emb = self.embed(x)  # (batch_size, seq_len, max_word_len, char_embed_size)
+        batch_size, seq_len, max_word_len, char_embed_size = emb.size()  # for reshaping
+        # 2. Dropout & reshape for convolution
+        emb = F.dropout(emb, self.drop_prob, self.training)  # same as word embedding layer
+        emb = emb.view(batch_size * seq_len, char_embed_size, max_word_len)  # re-arrange dims for conv
+        # 3. CNN layer = conv + relu
+        emb = self.conv(emb)  # (batch_size * seq_len, char_out_size, max_word_len - kernel_size + 1)
+        emb = F.relu(emb)  # Nonlinear transform conv output
+        # 4. Max pool & reshape for output
+        emb = self.max_pool(emb).squeeze(dim=2)  # (batch_size * seq_len, char_out_size)
+        emb = emb.view(batch_size, -1, self.char_out_size)  # (batch_size, seq_len, char_out_size)
+        # Want final output to be: (batch_size, seq_len, char_out_size) to parallel word emb layer
 
         return emb
 
