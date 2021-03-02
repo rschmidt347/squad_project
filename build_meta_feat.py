@@ -12,11 +12,6 @@ from args import get_add_feat_args
 
 def load_pos_ner():
     ner_tags = ['PERSON', 'CARDINAL', 'ORG', 'GPE', 'FAC', 'MONEY', 'NORP', 'DATE', 'TIME', 'ORDINAL', 'PERCENT',
-                'PRODUCT', 'LANGUAGE', 'LOC', 'QUANTITY', 'WORK_OF_ART', 'EVENT', 'LAW', 'PERSON', 'CARDINAL', 'ORG',
-                'GPE', 'FAC', 'MONEY', 'NORP', 'DATE', 'TIME', 'ORDINAL', 'PERCENT', 'PRODUCT', 'LANGUAGE', 'LOC',
-                'QUANTITY', 'WORK_OF_ART', 'EVENT', 'LAW', 'PERSON', 'CARDINAL', 'ORG', 'GPE', 'FAC', 'MONEY', 'NORP',
-                'DATE', 'TIME', 'ORDINAL', 'PERCENT', 'PRODUCT', 'LANGUAGE', 'LOC', 'QUANTITY', 'WORK_OF_ART', 'EVENT',
-                'LAW', 'PERSON', 'CARDINAL', 'ORG', 'GPE', 'FAC', 'MONEY', 'NORP', 'DATE', 'TIME', 'ORDINAL', 'PERCENT',
                 'PRODUCT', 'LANGUAGE', 'LOC', 'QUANTITY', 'WORK_OF_ART', 'EVENT', 'LAW', 'O']
     pos_tags = ['$', "''", ',', '-LRB-', '-RRB-', '.', ':', 'ADD', 'AFX', 'CC', 'CD', 'DT', 'EX', 'FW', 'HYPH', 'IN',
                 'JJ', 'JJR', 'JJS', 'LS', 'MD', 'NFP', 'NN', 'NNP', 'NNPS', 'NNS', 'PDT', 'POS', 'PRP', 'PRP$', 'RB',
