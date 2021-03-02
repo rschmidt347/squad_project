@@ -29,12 +29,14 @@ class Embedding(nn.Module):
         self.use_char_embeddings = use_char_embeddings
         self.embed = nn.Embedding.from_pretrained(word_vectors)
         self.proj = nn.Linear(word_vectors.size(1), hidden_size, bias=False)
+        # Move hwy layer to train loop to incorporate char encoder
         # self.hwy = HighwayEncoder(2, hidden_size)
 
     def forward(self, x):
         emb = self.embed(x)   # (batch_size, seq_len, embed_size)
         emb = F.dropout(emb, self.drop_prob, self.training)
         emb = self.proj(emb)  # (batch_size, seq_len, hidden_size)
+        # Move hwy layer to train loop to incorporate char encoder
         # emb = self.hwy(emb)   # (batch_size, seq_len, hidden_size)
 
         return emb
@@ -43,31 +45,31 @@ class CharEmbedding(nn.Module):
     """BiDAF character-level encoding via a CNN.
 
     Character-level encodings are aggregated to the word level using a CNN.
-    As in the word-level embedding, we project the char-level vectors to refine
-    their representation.
 
     Args:
         char_vectors (torch.Tensor): Pre-trained character vectors.
         hidden_size (int): Size of hidden activations.
         drop_prob (float): Probability of zero-ing out activations
     """
-    def __init__(self, char_vectors, hidden_size, drop_prob, kernel_size):
+    def __init__(self, char_vectors, hidden_size, drop_prob, kernel_size=5):
         super(CharEmbedding, self).__init__()
         self.drop_prob = drop_prob
         self.kernel_size = kernel_size
+        self.hidden_size = hidden_size
         self.embed = nn.Embedding.from_pretrained(char_vectors)
         self.conv = nn.Conv1d(in_channels=char_vectors.size(1),
-                              out_channels=self.hidden_size,
-                              kernel_size=self.kernel_size,
-                              bias=False)
-        # TODO self.max_pool = nn.MaxPool1d(...) ??
-        # TODO self.proj = nn.Linear(char_vectors.size(1), hidden_size, bias=False)
+                              out_channels=hidden_size,
+                              kernel_size=kernel_size)
+        self.max_pool = nn.AdaptiveMaxPool1d(output_size=1)
 
     def forward(self, x):
-        # x input: (batch_size, seq_len, max_word_len)
-        x = x.view(x.shape[0], x.shape[1]*x.shape[2])  # (batch_size, seq_len * max_word_len) ?
-        emb = self.embed(x)   # (batch_size, seq_len * max_word_len, embed_size) ?
-        # emb = self.proj(emb)  ??
+        batch_size = x.size(0)  # grab the batch size for use later
+        emb = self.embed(x)   # (batch_size, seq_len, max_word_len, char_embed_size)
+        emb = F.dropout(emb, self.drop_prob, self.training)  # dropout as in word embed layer
+        emb = self.conv(emb)  # (batch_size * seq_len, hidden_size, max_word_len - kernel_size + 1)
+        emb = F.ReLU(emb)  # Linear transform on conv
+        emb = self.max_pool(emb).squeeze(dim=2)  # (batch_size * seq_len, hidden_size)
+        emb = emb.view(batch_size, -1, self.hidden_size)  # (batch_size, seq_len, hidden_size)
         # Want final output to be: (batch_size, seq_len, hidden_size) to match word emb layer
 
         return emb
