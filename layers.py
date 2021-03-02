@@ -63,11 +63,12 @@ class CharEmbedding(nn.Module):
         self.max_pool = nn.AdaptiveMaxPool1d(output_size=1)
 
     def forward(self, x):
-        batch_size = x.size(0)  # grab the batch size for use later
         emb = self.embed(x)   # (batch_size, seq_len, max_word_len, char_embed_size)
+        batch_size, seq_len, max_word_len, char_embed_size = emb.size()
         emb = F.dropout(emb, self.drop_prob, self.training)  # dropout as in word embed layer
+        emb = emb.view(batch_size * seq_len, char_embed_size, max_word_len)
         emb = self.conv(emb)  # (batch_size * seq_len, hidden_size, max_word_len - kernel_size + 1)
-        emb = F.ReLU(emb)  # Linear transform on conv
+        emb = F.relu(emb)  # Linear transform on conv
         emb = self.max_pool(emb).squeeze(dim=2)  # (batch_size * seq_len, hidden_size)
         emb = emb.view(batch_size, -1, self.hidden_size)  # (batch_size, seq_len, hidden_size)
         # Want final output to be: (batch_size, seq_len, hidden_size) to match word emb layer

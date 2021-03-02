@@ -81,8 +81,8 @@ class BiDAF(nn.Module):
         if self.use_char_embeddings:
             cc_emb = self.char_emb(cc_idxs)  # (batch_size, c_len, hidden_size)
             qc_emb = self.char_emb(qc_idxs)  # (batch_size, q_len, hidden_size)
-            c_emb = torch.concat([c_emb, cc_emb], dim=2)  # (batch_size, c_len, final_hidden_size = 2 * hidden_size)
-            q_emb = torch.concat([q_emb, qc_emb], dim=2)  # (batch_size, q_len, final_hidden_size)
+            c_emb = torch.cat([c_emb, cc_emb], dim=2)  # (batch_size, c_len, final_hidden_size = 2 * hidden_size)
+            q_emb = torch.cat([q_emb, qc_emb], dim=2)  # (batch_size, q_len, final_hidden_size)
 
         c_emb = self.hwy(c_emb)  # (batch_size, c_len, final_hidden_size)
         q_emb = self.hwy(q_emb)  # (batch_size, q_len, final_hidden_size)
