@@ -1,8 +1,7 @@
 """
-Add input features from Stanford CoreNLP toolkit
-by combining pre-processed data .txt file with
+Add input features from spaCy tokenizer to output of setup.py
+by combining pre-processed data .txt file from DrQA script with
 original json SQuAD data.
-
 """
 import json
 import pandas as pd
