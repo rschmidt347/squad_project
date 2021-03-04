@@ -71,12 +71,14 @@ class SQuAD(data.Dataset):
         self.valid_idxs = [idx for idx in range(len(self.ids))
                            if use_v2 or self.y1s[idx].item() >= 0]
 
-        if use_token:
+        self.use_token = use_token
+        if self.use_token:
             # Load indices for token features
             self.ner_idxs = torch.from_numpy(dataset['ner_idxs']).long()
             self.pos_idxs = torch.from_numpy(dataset['pos_idxs']).long()
 
-        if use_exact:
+        self.use_exact = use_exact
+        if self.use_exact:
             # Load exact match features
             self.exact_orig = torch.from_numpy(dataset['exact_orig_feat']).long()
             self.exact_uncased = torch.from_numpy(dataset['exact_uncased_feat']).long()
@@ -90,12 +92,13 @@ class SQuAD(data.Dataset):
                    self.question_char_idxs[idx],
                    self.y1s[idx],
                    self.y2s[idx],
-                   self.ids[idx],
-                   self.ner_idxs[idx],
-                   self.pos_idxs[idx],
-                   self.exact_orig[idx],
-                   self.exact_uncased[idx],
-                   self.exact_lemma[idx])
+                   self.ids[idx])
+
+        if self.use_token:
+            example += (self.ner_idxs[idx], self.pos_idxs[idx])
+
+        if self.use_exact:
+            example += (self.exact_orig[idx], self.exact_uncased[idx], self.exact_lemma[idx])
 
         return example
 
