@@ -55,7 +55,9 @@ def main(args):
                   hidden_size=args.hidden_size,
                   drop_prob=args.drop_prob,
                   rnn_type=args.rnn_type,
-                  num_mod_layers=args.num_mod_layers)
+                  num_mod_layers=args.num_mod_layers,
+                  use_token=args.use_token,
+                  use_exact=args.use_exact)
 
     model = nn.DataParallel(model, args.gpu_ids)
     if args.load_path:
@@ -81,13 +83,15 @@ def main(args):
 
     # Get data loader
     log.info('Building dataset...')
-    train_dataset = SQuAD(args.train_record_file, args.use_squad_v2)
+    train_dataset = SQuAD(args.train_record_file, args.use_squad_v2,
+                          use_token=args.use_token, use_exact=args.use_exact)
     train_loader = data.DataLoader(train_dataset,
                                    batch_size=args.batch_size,
                                    shuffle=True,
                                    num_workers=args.num_workers,
                                    collate_fn=collate_fn)
-    dev_dataset = SQuAD(args.dev_record_file, args.use_squad_v2)
+    dev_dataset = SQuAD(args.dev_record_file, args.use_squad_v2,
+                        use_token=args.use_token, use_exact=args.use_exact)
     dev_loader = data.DataLoader(dev_dataset,
                                  batch_size=args.batch_size,
                                  shuffle=False,
@@ -103,21 +107,47 @@ def main(args):
         log.info(f'Starting epoch {epoch}...')
         with torch.enable_grad(), \
                 tqdm(total=len(train_loader.dataset)) as progress_bar:
-            for cw_idxs, cc_idxs, qw_idxs, qc_idxs, y1, y2, ids in train_loader:
+            for example in train_loader:
+
+                cw_idxs, cc_idxs, qw_idxs, qc_idxs, y1, y2, ids = example[:7]
+
+                ner_idxs, pos_idxs = None, None
+                exact_orig, exact_uncased, exact_lemma = None, None, None
+                if args.use_token:
+                    ner_idxs, pos_idxs = example[7:9]
+                    ner_idxs = ner_idxs.to(device)
+                    pos_idxs = pos_idxs.to(device)
+                    if args.use_exact:
+                        # Token features present, so splice example at later index
+                        exact_orig, exact_uncased, exact_lemma = example[9:]
+                        exact_orig = exact_orig.to(device)
+                        exact_uncased = exact_uncased.to(device)
+                        exact_lemma = exact_lemma.to(device)
+                else:
+                    if args.use_exact:
+                        # Token features present, so splice example at earlier index
+                        exact_orig, exact_uncased, exact_lemma = example[7:]
+                        exact_orig = exact_orig.to(device)
+                        exact_uncased = exact_uncased.to(device)
+                        exact_lemma = exact_lemma.to(device)
+
                 # Setup for forward
                 cw_idxs = cw_idxs.to(device)
                 qw_idxs = qw_idxs.to(device)
                 if args.use_char_embeddings:
                     cc_idxs = cc_idxs.to(device)
                     qc_idxs = qc_idxs.to(device)
+
                 batch_size = cw_idxs.size(0)
                 optimizer.zero_grad()
 
                 # Forward
                 if args.use_char_embeddings:
-                    log_p1, log_p2 = model(cw_idxs, qw_idxs, cc_idxs, qc_idxs)
+                    log_p1, log_p2 = model(cw_idxs, qw_idxs, cc_idxs, qc_idxs,
+                                           ner_idxs, pos_idxs, exact_orig, exact_uncased, exact_lemma)
                 else:
-                    log_p1, log_p2 = model(cw_idxs, qw_idxs)
+                    log_p1, log_p2 = model(cw_idxs, qw_idxs,
+                                           ner_idxs, pos_idxs, exact_orig, exact_uncased, exact_lemma)
                 y1, y2 = y1.to(device), y2.to(device)
                 loss = F.nll_loss(log_p1, y1) + F.nll_loss(log_p2, y2)
                 loss_val = loss.item()
