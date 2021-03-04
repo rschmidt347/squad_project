@@ -8,6 +8,7 @@ import argparse
 
 
 def get_setup_args(parser=None):
+
     """Get arguments needed in setup.py."""
     if parser is None:
         parser = argparse.ArgumentParser('Download and pre-process SQuAD')
@@ -147,8 +148,9 @@ def get_train_args():
     else:
         raise ValueError(f'Unrecognized metric name: "{args.metric_name}"')
 
+    # Error handling for new arguments at train time
     if args.rnn_type not in ('LSTM', 'GRU'):
-        raise ValueError(f'Unrecognized RNN type: "{args.rnn_type}"')
+        raise ValueError(f'Unrecognized RNN type: "{args.rnn_type}" - pick "LSTM" or "GRU"')
 
     return args
 
@@ -163,8 +165,8 @@ def get_test_args():
     # Change dev -> val for GradeScope
     parser.add_argument('--split',
                         type=str,
-                        default='val',
-                        choices=('train', 'val', 'test'),
+                        default='dev',
+                        choices=('train', 'dev', 'test'),
                         help='Split to use for testing.')
     parser.add_argument('--sub_file',
                         type=str,
@@ -175,6 +177,10 @@ def get_test_args():
     args = parser.parse_args()
     if not args.load_path:
         raise argparse.ArgumentError('Missing required argument --load_path')
+
+    # Error handling for new arguments at test time
+    if args.rnn_type not in ('LSTM', 'GRU'):
+        raise ValueError(f'Unrecognized RNN type: "{args.rnn_type}" - pick "LSTM" or "GRU"')
 
     return args
 
@@ -259,6 +265,11 @@ def add_train_test_args(parser):
                         type=int,
                         default=2,
                         help='Number of RNN layers in encoder "mod" modeling layer.')
+    # - Flag to use character embeddings
+    parser.add_argument('--use_char_embeddings',
+                        type=bool,
+                        default=False,
+                        help='Flag to use character embeddings in the BiDAF model.')
 
     # - Flag for use of exact match features
     parser.add_argument('--use_exact_match',

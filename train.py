@@ -43,26 +43,19 @@ def main(args):
     # Get embeddings
     log.info('Loading embeddings...')
     word_vectors = util.torch_from_json(args.word_emb_file)
+    # Option to use character embeddings
+    if args.use_char_embeddings:
+        char_vectors = util.torch_from_json(args.char_emb_file)
 
     # Get model
     log.info('Building model...')
-    if not (args.use_exact_match or args.use_token_feat):
-        model = BiDAF(word_vectors=word_vectors,
-                      hidden_size=args.hidden_size,
-                      drop_prob=args.drop_prob,
-                      rnn_type=args.rnn_type,
-                      num_mod_layers=args.num_mod_layers)
-    # Model with additional input features
-    else:
-        # Generate feature dictionary
-        examples = util.torch_from_json(args.features_file)
-        feature_dict = build_feature_dict(examples, args.use_exact_match, args.use_token_feat)
-        model = BiDAFWF(word_vectors=word_vectors,
-                        hidden_size=args.hidden_size,
-                        feature_dict=feature_dict,
-                        drop_prob=args.drop_prob,
-                        rnn_type=args.rnn_type,
-                        num_mod_layers=args.num_mod_layers)
+
+    model = BiDAF(word_vectors=word_vectors,
+                  char_vectors=char_vectors if args.use_char_embeddings else None,
+                  hidden_size=args.hidden_size,
+                  drop_prob=args.drop_prob,
+                  rnn_type=args.rnn_type,
+                  num_mod_layers=args.num_mod_layers)
 
     model = nn.DataParallel(model, args.gpu_ids)
     if args.load_path:
@@ -114,11 +107,17 @@ def main(args):
                 # Setup for forward
                 cw_idxs = cw_idxs.to(device)
                 qw_idxs = qw_idxs.to(device)
+                if args.use_char_embeddings:
+                    cc_idxs = cc_idxs.to(device)
+                    qc_idxs = qc_idxs.to(device)
                 batch_size = cw_idxs.size(0)
                 optimizer.zero_grad()
 
                 # Forward
-                log_p1, log_p2 = model(cw_idxs, qw_idxs)
+                if args.use_char_embeddings:
+                    log_p1, log_p2 = model(cw_idxs, qw_idxs, cc_idxs, qc_idxs)
+                else:
+                    log_p1, log_p2 = model(cw_idxs, qw_idxs)
                 y1, y2 = y1.to(device), y2.to(device)
                 loss = F.nll_loss(log_p1, y1) + F.nll_loss(log_p2, y2)
                 loss_val = loss.item()
@@ -150,7 +149,8 @@ def main(args):
                     results, pred_dict = evaluate(model, dev_loader, device,
                                                   args.dev_eval_file,
                                                   args.max_ans_len,
-                                                  args.use_squad_v2)
+                                                  args.use_squad_v2,
+                                                  args.use_char_embeddings)
                     saver.save(step, model, results[args.metric_name], device)
                     ema.resume(model)
 
@@ -170,7 +170,7 @@ def main(args):
                                    num_visuals=args.num_visuals)
 
 
-def evaluate(model, data_loader, device, eval_file, max_len, use_squad_v2):
+def evaluate(model, data_loader, device, eval_file, max_len, use_squad_v2, use_char_embeddings):
     nll_meter = util.AverageMeter()
 
     model.eval()
@@ -183,10 +183,16 @@ def evaluate(model, data_loader, device, eval_file, max_len, use_squad_v2):
             # Setup for forward
             cw_idxs = cw_idxs.to(device)
             qw_idxs = qw_idxs.to(device)
+            if use_char_embeddings:
+                cc_idxs = cc_idxs.to(device)
+                qc_idxs = qc_idxs.to(device)
             batch_size = cw_idxs.size(0)
 
             # Forward
-            log_p1, log_p2 = model(cw_idxs, qw_idxs)
+            if use_char_embeddings:
+                log_p1, log_p2 = model(cw_idxs, qw_idxs, cc_idxs, qc_idxs)
+            else:
+                log_p1, log_p2 = model(cw_idxs, qw_idxs)
             y1, y2 = y1.to(device), y2.to(device)
             loss = F.nll_loss(log_p1, y1) + F.nll_loss(log_p2, y2)
             nll_meter.update(loss.item(), batch_size)

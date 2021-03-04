@@ -1,0 +1,31 @@
+[03.03.21 19:25:14] Args: {
+    "batch_size": 64,
+    "char_emb_file": "./data/char_emb.json",
+    "dev_eval_file": "./data/dev_eval.json",
+    "dev_record_file": "./data/dev.npz",
+    "hidden_size": 100,
+    "load_path": "save/train/baseline_char-CNN-01/best.pth.tar",
+    "max_ans_len": 15,
+    "name": "baseline_char-CNN",
+    "num_mod_layers": 2,
+    "num_visuals": 10,
+    "num_workers": 4,
+    "rnn_type": "LSTM",
+    "save_dir": "./save/test/baseline_char-CNN-01",
+    "split": "dev",
+    "sub_file": "submission.csv",
+    "test_eval_file": "./data/test_eval.json",
+    "test_record_file": "./data/test.npz",
+    "train_eval_file": "./data/train_eval.json",
+    "train_record_file": "./data/train.npz",
+    "use_char_embeddings": true,
+    "use_squad_v2": true,
+    "word_emb_file": "./data/word_emb.json"
+}
+[03.03.21 19:25:14] Loading embeddings...
+[03.03.21 19:25:19] Building model...
+[03.03.21 19:25:20] Loading checkpoint from save/train/baseline_char-CNN-01/best.pth.tar...
+[03.03.21 19:25:21] Building dataset...
+[03.03.21 19:25:21] Evaluating on dev split...
+[03.03.21 19:25:43] Dev NLL: 03.27, F1: 62.82, EM: 59.23, AvNA: 69.69
+[03.03.21 19:25:44] Writing submission file to ./save/test/baseline_char-CNN-01/dev_submission.csv...
