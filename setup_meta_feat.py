@@ -6,7 +6,7 @@ import numpy as np
 import spacy
 from tqdm import tqdm
 from collections import Counter
-from setup import url_to_data_path, convert_idx, get_embedding, save, is_answerable
+from setup import convert_idx, save, is_answerable
 from args import get_add_feat_args
 
 
