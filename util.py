@@ -41,7 +41,7 @@ class SQuAD(data.Dataset):
         data_path (str): Path to .npz file containing pre-processed dataset.
         use_v2 (bool): Whether to use SQuAD 2.0 questions. Otherwise only use SQuAD 1.1.
     """
-    def __init__(self, data_path, use_v2=True):
+    def __init__(self, data_path, use_v2=True, use_token=False, use_exact=False):
         super(SQuAD, self).__init__()
 
         dataset = np.load(data_path)
@@ -70,6 +70,17 @@ class SQuAD(data.Dataset):
         self.ids = torch.from_numpy(dataset['ids']).long()
         self.valid_idxs = [idx for idx in range(len(self.ids))
                            if use_v2 or self.y1s[idx].item() >= 0]
+
+        if use_token:
+            # Load indices for token features
+            self.ner_idxs = torch.from_numpy(dataset['ner_idxs']).long()
+            self.pos_idxs = torch.from_numpy(dataset['pos_idxs']).long()
+
+        if use_exact:
+            # Load exact match features
+            self.exact_orig_feat = torch.from_numpy(dataset['exact_orig_feat']).long()
+            self.exact_uncased_feat = torch.from_numpy(dataset['exact_uncased_feat']).long()
+            self.exact_lemma_feat = torch.from_numpy(dataset['exact_lemma_feat']).long()
 
     def __getitem__(self, idx):
         idx = self.valid_idxs[idx]
