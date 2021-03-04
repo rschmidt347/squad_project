@@ -78,9 +78,9 @@ class SQuAD(data.Dataset):
 
         if use_exact:
             # Load exact match features
-            self.exact_orig_feat = torch.from_numpy(dataset['exact_orig_feat']).long()
-            self.exact_uncased_feat = torch.from_numpy(dataset['exact_uncased_feat']).long()
-            self.exact_lemma_feat = torch.from_numpy(dataset['exact_lemma_feat']).long()
+            self.exact_orig = torch.from_numpy(dataset['exact_orig_feat']).long()
+            self.exact_uncased = torch.from_numpy(dataset['exact_uncased_feat']).long()
+            self.exact_lemma = torch.from_numpy(dataset['exact_lemma_feat']).long()
 
     def __getitem__(self, idx):
         idx = self.valid_idxs[idx]
@@ -90,7 +90,12 @@ class SQuAD(data.Dataset):
                    self.question_char_idxs[idx],
                    self.y1s[idx],
                    self.y2s[idx],
-                   self.ids[idx])
+                   self.ids[idx],
+                   self.ner_idxs[idx],
+                   self.pos_idxs[idx],
+                   self.exact_orig[idx],
+                   self.exact_uncased[idx],
+                   self.exact_lemma[idx])
 
         return example
 
