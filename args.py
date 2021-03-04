@@ -272,20 +272,15 @@ def add_train_test_args(parser):
                         help='Flag to use character embeddings in the BiDAF model.')
 
     # - Flag for use of exact match features
-    parser.add_argument('--use_exact_match',
+    parser.add_argument('--use_exact',
                         type=lambda s: s.lower() in ('yes', 'y', 'true', 't', '1'),
                         default=False,
                         help='Whether to add exact match features')
-    # - Flag for use of token features (POS, NER, TF)
-    parser.add_argument('--use_token_feat',
+    # - Flag for use of token features (POS, NER)
+    parser.add_argument('--use_token',
                         type=lambda s: s.lower() in ('yes', 'y', 'true', 't', '1'),
                         default=False,
                         help='Whether to token features')
-    # - Path to pre-processed additional features
-    parser.add_argument('--feat_file_path',
-                        type=str,
-                        default=None,
-                        help='Path to file with additional input features.')
 
 
 def get_add_feat_args():
