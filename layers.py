@@ -11,6 +11,7 @@ import torch.nn.functional as F
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 from util import masked_softmax
 
+
 class Embedding(nn.Module):
     """Embedding layer used by BiDAF, without the character-level component.
 
@@ -40,6 +41,7 @@ class Embedding(nn.Module):
         # emb = self.hwy(emb)   # (batch_size, seq_len, hidden_size)
 
         return emb
+
 
 class CharEmbedding(nn.Module):
     """BiDAF character embedding layer to get character-level word embeddings.
@@ -78,6 +80,27 @@ class CharEmbedding(nn.Module):
         emb = self.max_pool(emb).squeeze(dim=2)  # (batch_size * seq_len, char_out_size)
         emb = emb.view(batch_size, -1, self.char_out_size)  # (batch_size, seq_len, char_out_size)
         # Want final output to be: (batch_size, seq_len, char_out_size) to parallel word emb layer
+
+        return emb
+
+
+class TokenEmbedding(nn.Module):
+    """Embedding layer used by BiDAF, for token features (NER, POS).
+
+    Args:
+        num_tags (int): Number of tags to build embeddings on.
+        embed_size (int): Size of embeddings.
+        drop_prob (float): Probability of zero-ing out activations.
+    """
+    def __init__(self, num_tags, embed_size, drop_prob):
+        super(TokenEmbedding, self).__init__()
+        self.drop_prob = drop_prob
+        self.embed = nn.Embedding(num_tags, embed_size)
+
+    def forward(self, x):
+        emb = self.embed(x)   # (batch_size, seq_len, embed_size)
+        emb = F.dropout(emb, self.drop_prob, self.training)
+        emb = self.proj(emb)  # (batch_size, seq_len, hidden_size)
 
         return emb
 
