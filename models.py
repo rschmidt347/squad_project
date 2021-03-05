@@ -112,14 +112,14 @@ class BiDAF(nn.Module):
             c_emb = torch.cat([c_emb, ner_idxs, pos_idxs], dim=2)  # (batch_size, c_len, hidden_size += 2)
 
         if self.use_exact:
-            # (batch_size, c_len, hidden_size += 3)
             c_emb = torch.cat([c_emb, exact_orig, exact_uncased, exact_lemma], dim=2)
-            # Now, c_hidden_size = q_hidden_size + (2 or 5)
-            # Need to adjust before or after feeding into highway
+            # -> (batch_size, c_len, hidden_size += 3)
+            # -> at this point, c_hidden_size = q_hidden_size + (2 or 5)
 
         c_emb = self.hwy(c_emb)  # (batch_size, c_len, final_context_hidden_size)
         q_emb = self.hwy(q_emb)  # (batch_size, q_len, final_hidden_size)
 
+        # Adjust final_context_hidden_size -> final_hidden_size in enc layer
         c_enc = self.enc(c_emb, c_len)    # (batch_size, c_len, 2 * final_hidden_size)
         q_enc = self.enc(q_emb, q_len)    # (batch_size, q_len, 2 * final_hidden_size)
 
