@@ -69,16 +69,12 @@ class BiDAF(nn.Module):
             # 3 new features: exact_orig, exact_uncased, exact_lemma
             final_context_hidden_size += 3
 
-        # Add projection layer to squeeze context vector back to final_hidden_size
-        if self.use_token or self.use_exact:
-            self.concat_proj = nn.Linear(final_context_hidden_size, hidden_size, bias=False)
-
         # Highway Layer now outside of the Embedding layer...
         # - Allows concatenated word+char vector to be fed into Highway Layer if needed
         self.hwy = layers.HighwayEncoder(num_layers=2,
                                          hidden_size=final_hidden_size)
 
-        self.enc = layers.RNNEncoder(input_size=final_hidden_size,
+        self.enc = layers.RNNEncoder(input_size=final_context_hidden_size,
                                      hidden_size=final_hidden_size,
                                      num_layers=1,
                                      drop_prob=drop_prob,
@@ -118,13 +114,10 @@ class BiDAF(nn.Module):
         if self.use_exact:
             # (batch_size, c_len, hidden_size += 3)
             c_emb = torch.cat([c_emb, exact_orig, exact_uncased, exact_lemma], dim=2)
+            # Now, c_hidden_size = q_hidden_size + (2 or 5)
+            # Need to adjust before or after feeding into highway
 
-        # Now, c_hidden_size = q_hidden_size + (2 or 5)
-        # Need to adjust before feeding into highway
-        if self.use_token or self.use_exact:
-            c_emb = self.concat_proj(c_emb)  # (batch_size, c_len, final_hidden_size)
-
-        c_emb = self.hwy(c_emb)  # (batch_size, c_len, final_hidden_size)
+        c_emb = self.hwy(c_emb)  # (batch_size, c_len, final_context_hidden_size)
         q_emb = self.hwy(q_emb)  # (batch_size, q_len, final_hidden_size)
 
         c_enc = self.enc(c_emb, c_len)    # (batch_size, c_len, 2 * final_hidden_size)
