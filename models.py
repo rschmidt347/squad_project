@@ -45,8 +45,8 @@ class BiDAF(nn.Module):
                                     hidden_size=hidden_size,
                                     drop_prob=drop_prob)
 
+        # Variable to keep track of original hidden size
         final_hidden_size = hidden_size
-
         # If using character embeddings, feed through char-CNN to get word-level embeddings
         if self.use_char_embeddings:
             # Using char_out_size = hidden size as in original BiDAF paper
@@ -56,26 +56,24 @@ class BiDAF(nn.Module):
             # If concat [embed, char_embed], then final_hidden_size = hidden_size + char_out_size
             final_hidden_size += hidden_size  # since char_out_size = hidden_size
 
+        # Now, account for tagged features
+        final_context_hidden_size = final_hidden_size
         # If using NER and POS, feed through embedding
         self.use_token = use_token
         if self.use_token:
-            self.ner_emb = layers.TokenEmbedding(num_tags=NUM_NER_TAGS,
-                                                 embed_size=token_embed_size,
-                                                 drop_prob=drop_prob)
-            self.pos_emb = layers.TokenEmbedding(num_tags=NUM_POS_TAGS,
-                                                 embed_size=token_embed_size,
-                                                 drop_prob=drop_prob)
-            # If concat [ner_emb, pos_emb] to other embeddings, then final_hidden_size += 2 * token_embed_size
-            final_hidden_size += 2 * token_embed_size
-
+            # If x_emb -> [x_emb, x_pos, x_ner]; each word gets associated pos & ner
+            self.to_one_hot = layers.TokenToOneHot(...)
+            final_context_hidden_size += NUM_NER_TAGS + NUM_POS_TAGS
         # If using exact features
         self.use_exact = use_exact
         if self.use_exact:
             # 3 new features: exact_orig, exact_uncased, exact_lemma
-            final_hidden_size += 3
+            final_context_hidden_size += 3
 
         # Highway Layer now outside of the Embedding layer...
         # - Allows concatenated word+char vector to be fed into Highway Layer if needed
+        self.proj = nn.Linear(final_context_hidden_size, hidden_size, bias=False)
+
         self.hwy = layers.HighwayEncoder(num_layers=2,
                                          hidden_size=final_hidden_size)
 
@@ -110,21 +108,25 @@ class BiDAF(nn.Module):
         if self.use_char_embeddings:
             cc_emb = self.char_emb(cc_idxs)  # (batch_size, c_len, hidden_size)
             qc_emb = self.char_emb(qc_idxs)  # (batch_size, q_len, hidden_size)
-            c_emb = torch.cat([c_emb, cc_emb], dim=2)  # (batch_size, c_len, final_hidden_size = 2 * hidden_size)
-            q_emb = torch.cat([q_emb, qc_emb], dim=2)  # (batch_size, q_len, final_hidden_size)
+            c_emb = torch.cat([c_emb, cc_emb], dim=2)  # (batch_size, c_len, hidden_size += hidden_size)
+            q_emb = torch.cat([q_emb, qc_emb], dim=2)  # (batch_size, q_len, hidden_size += hidden_size)
 
         if self.use_token:
-            n_emb = self.ner_emb(ner_idxs)  # (batch_size, c_len, token_embed_size)
-            p_emb = self.pos_emb(pos_idxs)  # (batch_size, c_len, token_embed_size)
-            c_emb = torch.cat([c_emb, n_emb, p_emb], dim=2)  # (batch_size, c_len, final_hidden_size)
+            c_emb = torch.cat([c_emb, ner_idxs, pos_idxs], dim=2)  # (batch_size, c_len, hidden_size += 2)
 
         if self.use_exact:
-            # (batch_size, c_len, final_hidden_size = final_hidden_size + 3)
             c_emb = torch.cat([c_emb, exact_orig, exact_uncased, exact_lemma], dim=2)
+            # -> (batch_size, c_len, hidden_size += 3)
+            # -> at this point, c_hidden_size = q_hidden_size + (2 or 5)
+
+        # Project context word embeddings from final_context_hidden_size -> final_hidden_size
+        if self.use_exact or self.use_token:
+            c_emb = self.proj(c_emb)  # (batch_size, c_len, final_hidden_size)
 
         c_emb = self.hwy(c_emb)  # (batch_size, c_len, final_hidden_size)
         q_emb = self.hwy(q_emb)  # (batch_size, q_len, final_hidden_size)
 
+        # Adjust final_context_hidden_size -> final_hidden_size in enc layer
         c_enc = self.enc(c_emb, c_len)    # (batch_size, c_len, 2 * final_hidden_size)
         q_enc = self.enc(q_emb, q_len)    # (batch_size, q_len, 2 * final_hidden_size)
 
