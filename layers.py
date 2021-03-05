@@ -84,27 +84,6 @@ class CharEmbedding(nn.Module):
         return emb
 
 
-class TokenEmbedding(nn.Module):
-    """Embedding layer used by BiDAF, for token features (NER, POS).
-
-    Args:
-        num_tags (int): Number of tags to build embeddings on.
-        embed_size (int): Size of embeddings.
-        drop_prob (float): Probability of zero-ing out activations.
-    """
-    def __init__(self, num_tags, embed_size, drop_prob):
-        super(TokenEmbedding, self).__init__()
-        self.drop_prob = drop_prob
-        self.embed = nn.Embedding(num_tags, embed_size)
-
-    def forward(self, x):
-        emb = self.embed(x)   # (batch_size, seq_len, embed_size)
-        emb = F.dropout(emb, self.drop_prob, self.training)
-        emb = self.proj(emb)  # (batch_size, seq_len, hidden_size)
-
-        return emb
-
-
 class HighwayEncoder(nn.Module):
     """Encode an input sequence using a highway network.
 
