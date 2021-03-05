@@ -62,7 +62,8 @@ class BiDAF(nn.Module):
         self.use_token = use_token
         if self.use_token:
             # If x_emb -> [x_emb, x_pos, x_ner]; each word gets associated pos & ner
-            final_context_hidden_size += 2
+            self.to_one_hot = layers.TokenToOneHot(...)
+            final_context_hidden_size += NUM_NER_TAGS + NUM_POS_TAGS
         # If using exact features
         self.use_exact = use_exact
         if self.use_exact:
@@ -71,10 +72,12 @@ class BiDAF(nn.Module):
 
         # Highway Layer now outside of the Embedding layer...
         # - Allows concatenated word+char vector to be fed into Highway Layer if needed
+        self.proj = nn.Linear(final_context_hidden_size, hidden_size, bias=False)
+
         self.hwy = layers.HighwayEncoder(num_layers=2,
                                          hidden_size=final_hidden_size)
 
-        self.enc = layers.RNNEncoder(input_size=final_context_hidden_size,
+        self.enc = layers.RNNEncoder(input_size=final_hidden_size,
                                      hidden_size=final_hidden_size,
                                      num_layers=1,
                                      drop_prob=drop_prob,
@@ -116,7 +119,11 @@ class BiDAF(nn.Module):
             # -> (batch_size, c_len, hidden_size += 3)
             # -> at this point, c_hidden_size = q_hidden_size + (2 or 5)
 
-        c_emb = self.hwy(c_emb)  # (batch_size, c_len, final_context_hidden_size)
+        # Project context word embeddings from final_context_hidden_size -> final_hidden_size
+        if self.use_exact or self.use_token:
+            c_emb = self.proj(c_emb)  # (batch_size, c_len, final_hidden_size)
+
+        c_emb = self.hwy(c_emb)  # (batch_size, c_len, final_hidden_size)
         q_emb = self.hwy(q_emb)  # (batch_size, q_len, final_hidden_size)
 
         # Adjust final_context_hidden_size -> final_hidden_size in enc layer
