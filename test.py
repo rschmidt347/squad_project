@@ -21,12 +21,12 @@ import util
 from args import get_test_args
 from collections import OrderedDict
 from json import dumps
-from models import BiDAF, BiDAFWF
+from models import BiDAF
 from os.path import join
 from tensorboardX import SummaryWriter
 from tqdm import tqdm
 from ujson import load as json_load
-from util import collate_fn, SQuAD, build_feature_dict
+from util import collate_fn, SQuAD
 
 
 def main(args):
@@ -79,7 +79,30 @@ def main(args):
         gold_dict = json_load(fh)
     with torch.no_grad(), \
             tqdm(total=len(dataset)) as progress_bar:
-        for cw_idxs, cc_idxs, qw_idxs, qc_idxs, y1, y2, ids in data_loader:
+        for example in data_loader:
+
+            cw_idxs, cc_idxs, qw_idxs, qc_idxs, y1, y2, ids = example[:7]
+
+            ner_idxs, pos_idxs = None, None
+            exact_orig, exact_uncased, exact_lemma = None, None, None
+            if args.use_token:
+                ner_idxs, pos_idxs = example[7:9]
+                ner_idxs = ner_idxs.to(device)
+                pos_idxs = pos_idxs.to(device)
+                if args.use_exact:
+                    # Token features present, so splice example at later index
+                    exact_orig, exact_uncased, exact_lemma = example[9:]
+                    exact_orig = exact_orig.to(device)
+                    exact_uncased = exact_uncased.to(device)
+                    exact_lemma = exact_lemma.to(device)
+            else:
+                if args.use_exact:
+                    # Token features present, so splice example at earlier index
+                    exact_orig, exact_uncased, exact_lemma = example[7:]
+                    exact_orig = exact_orig.to(device)
+                    exact_uncased = exact_uncased.to(device)
+                    exact_lemma = exact_lemma.to(device)
+
             # Setup for forward
             cw_idxs = cw_idxs.to(device)
             qw_idxs = qw_idxs.to(device)
@@ -90,9 +113,11 @@ def main(args):
 
             # Forward
             if args.use_char_embeddings:
-                log_p1, log_p2 = model(cw_idxs, qw_idxs, cc_idxs, qc_idxs)
+                log_p1, log_p2 = model(cw_idxs, qw_idxs, cc_idxs, qc_idxs,
+                                       ner_idxs, pos_idxs, exact_orig, exact_uncased, exact_lemma)
             else:
-                log_p1, log_p2 = model(cw_idxs, qw_idxs)
+                log_p1, log_p2 = model(cw_idxs, qw_idxs,
+                                       ner_idxs, pos_idxs, exact_orig, exact_uncased, exact_lemma)
             y1, y2 = y1.to(device), y2.to(device)
             loss = F.nll_loss(log_p1, y1) + F.nll_loss(log_p2, y2)
             nll_meter.update(loss.item(), batch_size)

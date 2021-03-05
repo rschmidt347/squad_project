@@ -17,11 +17,11 @@ import util
 from args import get_train_args
 from collections import OrderedDict
 from json import dumps
-from models import BiDAF, BiDAFWF
+from models import BiDAF
 from tensorboardX import SummaryWriter
 from tqdm import tqdm
 from ujson import load as json_load
-from util import collate_fn, SQuAD, build_feature_dict
+from util import collate_fn, SQuAD
 
 
 def main(args):
@@ -180,7 +180,9 @@ def main(args):
                                                   args.dev_eval_file,
                                                   args.max_ans_len,
                                                   args.use_squad_v2,
-                                                  args.use_char_embeddings)
+                                                  args.use_char_embeddings,
+                                                  args.use_token,
+                                                  args.use_exact)
                     saver.save(step, model, results[args.metric_name], device)
                     ema.resume(model)
 
@@ -200,7 +202,8 @@ def main(args):
                                    num_visuals=args.num_visuals)
 
 
-def evaluate(model, data_loader, device, eval_file, max_len, use_squad_v2, use_char_embeddings):
+def evaluate(model, data_loader, device, eval_file, max_len, use_squad_v2, use_char_embeddings,
+             use_token=False, use_exact=False):
     nll_meter = util.AverageMeter()
 
     model.eval()
@@ -209,7 +212,30 @@ def evaluate(model, data_loader, device, eval_file, max_len, use_squad_v2, use_c
         gold_dict = json_load(fh)
     with torch.no_grad(), \
             tqdm(total=len(data_loader.dataset)) as progress_bar:
-        for cw_idxs, cc_idxs, qw_idxs, qc_idxs, y1, y2, ids in data_loader:
+        for example in data_loader:
+
+            cw_idxs, cc_idxs, qw_idxs, qc_idxs, y1, y2, ids = example[:7]
+
+            ner_idxs, pos_idxs = None, None
+            exact_orig, exact_uncased, exact_lemma = None, None, None
+            if use_token:
+                ner_idxs, pos_idxs = example[7:9]
+                ner_idxs = ner_idxs.to(device)
+                pos_idxs = pos_idxs.to(device)
+                if use_exact:
+                    # Token features present, so splice example at later index
+                    exact_orig, exact_uncased, exact_lemma = example[9:]
+                    exact_orig = exact_orig.to(device)
+                    exact_uncased = exact_uncased.to(device)
+                    exact_lemma = exact_lemma.to(device)
+            else:
+                if use_exact:
+                    # Token features present, so splice example at earlier index
+                    exact_orig, exact_uncased, exact_lemma = example[7:]
+                    exact_orig = exact_orig.to(device)
+                    exact_uncased = exact_uncased.to(device)
+                    exact_lemma = exact_lemma.to(device)
+
             # Setup for forward
             cw_idxs = cw_idxs.to(device)
             qw_idxs = qw_idxs.to(device)
@@ -220,9 +246,12 @@ def evaluate(model, data_loader, device, eval_file, max_len, use_squad_v2, use_c
 
             # Forward
             if use_char_embeddings:
-                log_p1, log_p2 = model(cw_idxs, qw_idxs, cc_idxs, qc_idxs)
+                log_p1, log_p2 = model(cw_idxs, qw_idxs, cc_idxs, qc_idxs,
+                                       ner_idxs, pos_idxs, exact_orig, exact_uncased, exact_lemma)
             else:
-                log_p1, log_p2 = model(cw_idxs, qw_idxs)
+                log_p1, log_p2 = model(cw_idxs, qw_idxs,
+                                       ner_idxs, pos_idxs, exact_orig, exact_uncased, exact_lemma)
+
             y1, y2 = y1.to(device), y2.to(device)
             loss = F.nll_loss(log_p1, y1) + F.nll_loss(log_p2, y2)
             nll_meter.update(loss.item(), batch_size)
