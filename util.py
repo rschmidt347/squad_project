@@ -113,11 +113,11 @@ def collate_fn(examples):
 
     Args:
         examples (list): List of tuples of the form (context_idxs, context_char_idxs,
-        question_idxs, question_char_idxs, y1s, y2s, ids).
+        question_idxs, question_char_idxs, y1s, y2s, ids, ...).
 
     Returns:
         examples (tuple): Tuple of tensors (context_idxs, context_char_idxs, question_idxs,
-        question_char_idxs, y1s, y2s, ids). All of shape (batch_size, ...), where
+        question_char_idxs, y1s, y2s, ids, ...). All of shape (batch_size, ...), where
         the remaining dimensions are the maximum length of examples in the input.
 
     Adapted from:
@@ -143,23 +143,78 @@ def collate_fn(examples):
             padded[i, :height, :width] = seq[:height, :width]
         return padded
 
-    # Group by tensor type
-    context_idxs, context_char_idxs, \
-        question_idxs, question_char_idxs, \
-        y1s, y2s, ids = zip(*examples)
+    num_elts = len(examples[0])
 
-    # Merge into batch tensors
-    context_idxs = merge_1d(context_idxs)
-    context_char_idxs = merge_2d(context_char_idxs)
-    question_idxs = merge_1d(question_idxs)
-    question_char_idxs = merge_2d(question_char_idxs)
-    y1s = merge_0d(y1s)
-    y2s = merge_0d(y2s)
-    ids = merge_0d(ids)
+    if num_elts == 7:
+        # No added features
+        # Group by tensor type
+        context_idxs, context_char_idxs, question_idxs, question_char_idxs, y1s, y2s, ids = zip(*examples)
+        # Merge into batch tensors
+        context_idxs = merge_1d(context_idxs)
+        context_char_idxs = merge_2d(context_char_idxs)
+        question_idxs = merge_1d(question_idxs)
+        question_char_idxs = merge_2d(question_char_idxs)
+        y1s = merge_0d(y1s)
+        y2s = merge_0d(y2s)
+        ids = merge_0d(ids)
+        return (context_idxs, context_char_idxs,
+                question_idxs, question_char_idxs,
+                y1s, y2s, ids)
 
-    return (context_idxs, context_char_idxs,
-            question_idxs, question_char_idxs,
-            y1s, y2s, ids)
+    elif num_elts == 9:
+        # Token features only
+        context_idxs, context_char_idxs, question_idxs, question_char_idxs, y1s, y2s, ids, \
+            ner_idxs, pos_idxs = zip(*examples)
+        # Merge into batch tensors
+        context_idxs = merge_1d(context_idxs)
+        context_char_idxs = merge_2d(context_char_idxs)
+        question_idxs = merge_1d(question_idxs)
+        question_char_idxs = merge_2d(question_char_idxs)
+        y1s = merge_0d(y1s)
+        y2s = merge_0d(y2s)
+        ids = merge_0d(ids)
+        ner_idxs = merge_1d(ner_idxs)
+        pos_idxs = merge_1d(pos_idxs)
+        return (context_idxs, context_char_idxs, question_idxs, question_char_idxs, y1s, y2s, ids,
+                ner_idxs, pos_idxs)
+
+    elif num_elts == 10:
+        # Exact match features only
+        context_idxs, context_char_idxs, question_idxs, question_char_idxs, y1s, y2s, ids, \
+            exact_orig, exact_uncased, exact_lemma = zip(*examples)
+        # Merge into batch tensors
+        context_idxs = merge_1d(context_idxs)
+        context_char_idxs = merge_2d(context_char_idxs)
+        question_idxs = merge_1d(question_idxs)
+        question_char_idxs = merge_2d(question_char_idxs)
+        y1s = merge_0d(y1s)
+        y2s = merge_0d(y2s)
+        ids = merge_0d(ids)
+        exact_orig = merge_1d(exact_orig)
+        exact_uncased = merge_1d(exact_uncased)
+        exact_lemma = merge_1d(exact_lemma)
+        return (context_idxs, context_char_idxs, question_idxs, question_char_idxs, y1s, y2s, ids,
+                exact_orig, exact_uncased, exact_lemma)
+
+    elif num_elts == 12:
+        # All extra features
+        context_idxs, context_char_idxs, question_idxs, question_char_idxs, y1s, y2s, ids, \
+            ner_idxs, pos_idxs, exact_orig, exact_uncased, exact_lemma = zip(*examples)
+        # Merge into batch tensors
+        context_idxs = merge_1d(context_idxs)
+        context_char_idxs = merge_2d(context_char_idxs)
+        question_idxs = merge_1d(question_idxs)
+        question_char_idxs = merge_2d(question_char_idxs)
+        y1s = merge_0d(y1s)
+        y2s = merge_0d(y2s)
+        ids = merge_0d(ids)
+        ner_idxs = merge_1d(ner_idxs)
+        pos_idxs = merge_1d(pos_idxs)
+        exact_orig = merge_1d(exact_orig)
+        exact_uncased = merge_1d(exact_uncased)
+        exact_lemma = merge_1d(exact_lemma)
+        return (context_idxs, context_char_idxs, question_idxs, question_char_idxs, y1s, y2s, ids,
+                ner_idxs, pos_idxs, exact_orig, exact_uncased, exact_lemma)
 
 
 class AverageMeter:
@@ -694,42 +749,6 @@ def eval_dicts(gold_dict, pred_dict, no_answer):
 def compute_avna(prediction, ground_truths):
     """Compute answer vs. no-answer accuracy."""
     return float(bool(prediction) == bool(ground_truths))
-
-
-def build_feature_dict(examples, use_exact_match, use_token_feat):
-    """Index features (one hot) from fields in examples and options.
-
-    Modified from build_feature_dict in DrQA repo:
-    https://github.com/facebookresearch/DrQA/blob/master/drqa/reader/utils.py
-    """
-    def _insert(feature):
-        if feature not in feature_dict:
-            feature_dict[feature] = len(feature_dict)
-
-    feature_dict = {}
-
-    # Exact match features
-    if use_exact_match:
-        _insert('in_question')
-        _insert('in_question_uncased')
-        _insert('in_question_lemma')
-
-    if use_token_feat:
-        # Part of speech tag features
-        for ex in examples:
-            for w in ex['pos']:
-                _insert('pos=%s' % w)
-
-        # Named entity tag features
-        for ex in examples:
-            for w in ex['ner']:
-                _insert('ner=%s' % w)
-
-        # Term frequency feature
-        _insert('tf')
-
-    return feature_dict
-
 
 
 # All methods below this line are from the official SQuAD 2.0 eval script
