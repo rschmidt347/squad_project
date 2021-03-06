@@ -111,7 +111,9 @@ class TokenEncoder(nn.Module):
         return emb
 
     def to_one_hot(self, x, num_classes):
-        return torch.zeros(x.shape[0], x.shape[1], num_classes).scatter_(2, torch.unsqueeze(x, 2), 1).cuda()
+        batch_size, seq_len = x.shape
+        x = torch.unsqueeze(x, 2)
+        return torch.zeros(batch_size, seq_len, num_classes).scatter_(2, x, 1)
         # -> (batch_size, seq_len, num_classes)
 
 
