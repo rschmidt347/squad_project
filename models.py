@@ -132,9 +132,9 @@ class BiDAF(nn.Module):
 
         if self.use_exact:
             # exact_{orig, uncased, lemma} all have dimensions: (batch_size, c_len)
-            exact_orig = torch.unsqueeze(exact_orig, dim=2)
-            exact_uncased = torch.unsqueeze(exact_uncased, dim=2)
-            exact_lemma = torch.unsqueeze(exact_lemma, dim=2)
+            exact_orig = torch.unsqueeze(exact_orig, dim=2).float()
+            exact_uncased = torch.unsqueeze(exact_uncased, dim=2).float()
+            exact_lemma = torch.unsqueeze(exact_lemma, dim=2).float()
             # -> (batch_size, c_len, 1)
             c_emb = torch.cat([c_emb, exact_orig, exact_uncased, exact_lemma], dim=2)
             # -> (batch_size, c_len, final_context_hidden_size += 3)
