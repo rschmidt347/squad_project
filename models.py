@@ -138,6 +138,7 @@ class BiDAF(nn.Module):
             exact_orig = torch.unsqueeze(exact_orig, dim=2).float()
             exact_uncased = torch.unsqueeze(exact_uncased, dim=2).float()
             exact_lemma = torch.unsqueeze(exact_lemma, dim=2).float()
+            print("c_emb has shape:", c_emb.shape)
             print("exact_orig has shape:", exact_orig.shape)
             print("exact_uncased has shape:", exact_uncased.shape)
             print("exact_lemma has shape:", exact_lemma.shape)
