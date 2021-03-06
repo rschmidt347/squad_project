@@ -105,16 +105,12 @@ class TokenEncoder(nn.Module):
             emb = F.dropout(emb, self.drop_prob, self.training)
         else:
             # Initially x has dim (batch_size, seq_len)
-            emb = self.to_one_hot(x, num_classes=self.num_tags)
+            batch_size, seq_len = x.shape
+            x = torch.unsqueeze(x, 2)
+            emb = torch.zeros(batch_size, seq_len, self.num_tags).scatter_(2, x, 1).to(x.device)
             # -> (batch_size, seq_len, num_tags)
 
         return emb
-
-    def to_one_hot(self, x, num_classes):
-        batch_size, seq_len = x.shape
-        x = torch.unsqueeze(x, 2)
-        return torch.zeros(batch_size, seq_len, num_classes).scatter_(2, x, 1)
-        # -> (batch_size, seq_len, num_classes)
 
 
 class HighwayEncoder(nn.Module):
