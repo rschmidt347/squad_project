@@ -34,10 +34,13 @@ class BiDAF(nn.Module):
         drop_prob (float): Dropout probability.
         rnn_type (str): RNN architecture used for encoder layer; one of 'LSTM' or 'GRU'.
         char_vectors (torch.Tensor): Pre-trained character vectors.
+        use_token (bool): Flag for using token features (NER, POS)
+        token_embed_size (int): Size of embedding for NER/POS; 0 if using one-hot-encoding
+        use_exact (bool): Flag for using exact match features (original, uncased, lemma)
     """
     def __init__(self, word_vectors, hidden_size,
                  drop_prob=0., rnn_type='LSTM', num_mod_layers=2, char_vectors=None,
-                 use_token=False, token_embed_size=10, use_exact=False):
+                 use_token=False, token_embed_size=0, use_exact=False):
         super(BiDAF, self).__init__()
         # Use character embeddings if fed into the BiDAF model
         self.use_char_embeddings = True if char_vectors is not None else False
@@ -62,8 +65,18 @@ class BiDAF(nn.Module):
         self.use_token = use_token
         if self.use_token:
             # If x_emb -> [x_emb, x_pos, x_ner]; each word gets associated pos & ner
-            self.to_one_hot = layers.TokenToOneHot(...)
-            final_context_hidden_size += NUM_NER_TAGS + NUM_POS_TAGS
+            if token_embed_size > 0:
+                # Embed tokens:
+                self.enc_ner = layers.TokenEncoder(num_tags=NUM_NER_TAGS, embed_size=token_embed_size,
+                                                   drop_prob=drop_prob, use_embed=True)
+                self.enc_pos = layers.TokenEncoder(num_tags=NUM_POS_TAGS, embed_size=token_embed_size,
+                                                   drop_prob=drop_prob, use_embed=True)
+                final_context_hidden_size += 2 * token_embed_size
+            else:
+                # One-hot-encode tokens:
+                self.enc_ner = layers.TokenEncoder(num_tags=NUM_NER_TAGS)
+                self.enc_pos = layers.TokenEncoder(num_tags=NUM_POS_TAGS)
+                final_context_hidden_size += NUM_NER_TAGS + NUM_POS_TAGS
         # If using exact features
         self.use_exact = use_exact
         if self.use_exact:
@@ -108,16 +121,23 @@ class BiDAF(nn.Module):
         if self.use_char_embeddings:
             cc_emb = self.char_emb(cc_idxs)  # (batch_size, c_len, hidden_size)
             qc_emb = self.char_emb(qc_idxs)  # (batch_size, q_len, hidden_size)
-            c_emb = torch.cat([c_emb, cc_emb], dim=2)  # (batch_size, c_len, hidden_size += hidden_size)
-            q_emb = torch.cat([q_emb, qc_emb], dim=2)  # (batch_size, q_len, hidden_size += hidden_size)
+            c_emb = torch.cat([c_emb, cc_emb], dim=2)  # (batch_size, c_len, final_context_hidden_size = 2*hidden_size)
+            q_emb = torch.cat([q_emb, qc_emb], dim=2)  # (batch_size, q_len, final_hidden_size = 2 * hidden_size)
 
         if self.use_token:
-            c_emb = torch.cat([c_emb, ner_idxs, pos_idxs], dim=2)  # (batch_size, c_len, hidden_size += 2)
+            ner_emb = self.enc_ner(ner_idxs)    # (batch_size, c_len, {token_embed_size OR NUM_NER_TAGS})
+            pos_emb = self.enc_pos(pos_idxs)    # (batch_size, c_len, {token_embed_size OR NUM_POS_TAGS})
+            c_emb = torch.cat([c_emb, ner_emb, pos_emb], dim=2)
+            # -> (batch_size, c_len, final_context_hidden_size += {2 * token_embed_size OR (NUM_NER_TAGS+NUM_POS_TAGS)})
 
         if self.use_exact:
+            # exact_{orig, uncased, lemma} all have dimensions: (batch_size, c_len)
+            exact_orig = torch.unsqueeze(exact_orig, dim=2)
+            exact_uncased = torch.unsqueeze(exact_uncased, dim=2)
+            exact_lemma = torch.unsqueeze(exact_lemma, dim=2)
+            # -> (batch_size, c_len, 1)
             c_emb = torch.cat([c_emb, exact_orig, exact_uncased, exact_lemma], dim=2)
-            # -> (batch_size, c_len, hidden_size += 3)
-            # -> at this point, c_hidden_size = q_hidden_size + (2 or 5)
+            # -> (batch_size, c_len, final_context_hidden_size += 3)
 
         # Project context word embeddings from final_context_hidden_size -> final_hidden_size
         if self.use_exact or self.use_token:
