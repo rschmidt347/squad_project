@@ -284,7 +284,7 @@ def add_train_test_args(parser):
 
 
 def get_add_feat_args():
-    """Get args used by build_meta_feat.py"""
+    """Get args used by setup_meta_feat.py"""
     parser = argparse.ArgumentParser('Pre-process additional features files')
 
     get_setup_args(parser)
