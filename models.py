@@ -127,6 +127,9 @@ class BiDAF(nn.Module):
         if self.use_token:
             ner_emb = self.enc_ner(ner_idxs)    # (batch_size, c_len, {token_embed_size OR NUM_NER_TAGS})
             pos_emb = self.enc_pos(pos_idxs)    # (batch_size, c_len, {token_embed_size OR NUM_POS_TAGS})
+            print("c_emb has shape:", c_emb.shape)
+            print("ner_emb has shape:", ner_emb.shape)
+            print("pos_emb has shape:", pos_emb.shape)
             c_emb = torch.cat([c_emb, ner_emb, pos_emb], dim=2)
             # -> (batch_size, c_len, final_context_hidden_size += {2 * token_embed_size OR (NUM_NER_TAGS+NUM_POS_TAGS)})
 
@@ -135,6 +138,9 @@ class BiDAF(nn.Module):
             exact_orig = torch.unsqueeze(exact_orig, dim=2).float()
             exact_uncased = torch.unsqueeze(exact_uncased, dim=2).float()
             exact_lemma = torch.unsqueeze(exact_lemma, dim=2).float()
+            print("exact_orig has shape:", exact_orig.shape)
+            print("exact_uncased has shape:", exact_uncased.shape)
+            print("exact_lemma has shape:", exact_lemma.shape)
             # -> (batch_size, c_len, 1)
             c_emb = torch.cat([c_emb, exact_orig, exact_uncased, exact_lemma], dim=2)
             # -> (batch_size, c_len, final_context_hidden_size += 3)
