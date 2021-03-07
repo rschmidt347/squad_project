@@ -160,13 +160,13 @@ class BiDAF(nn.Module):
         q_emb = self.hwy(q_emb)  # (batch_size, q_len, final_hidden_size)
 
         print("c_emb shape after hwy layer:", c_emb.shape)
-        print("c_len shape:", c_len.shape)
         print("q_emb shape:", q_emb.shape)
-        print("q_len shape:", q_len.shape)
 
         # Adjust final_context_hidden_size -> final_hidden_size in enc layer
+        q_enc = self.enc(q_emb, q_len)  # (batch_size, q_len, 2 * final_hidden_size)
+        print("Passed q encoder!")
         c_enc = self.enc(c_emb, c_len)    # (batch_size, c_len, 2 * final_hidden_size)
-        q_enc = self.enc(q_emb, q_len)    # (batch_size, q_len, 2 * final_hidden_size)
+
 
         att = self.att(c_enc, q_enc,
                        c_mask, q_mask)    # (batch_size, c_len, 8 * final_hidden_size)
