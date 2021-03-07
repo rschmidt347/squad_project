@@ -84,7 +84,7 @@ class BiDAF(nn.Module):
             final_context_hidden_size += 3
 
         # Projection layer to decrease dimensions if extra features used
-        self.proj = nn.Linear(final_context_hidden_size, final_hidden_size, bias=False)
+        self.project = nn.Linear(final_context_hidden_size, final_hidden_size, bias=False)
 
         # Highway Layer now outside of the Embedding layer...
         # - Allows concatenated word+char vector to be fed into Highway Layer if needed
@@ -148,9 +148,13 @@ class BiDAF(nn.Module):
             c_emb = torch.cat([c_emb, exact_orig, exact_uncased, exact_lemma], dim=2)
             # -> (batch_size, c_len, final_context_hidden_size += 3)
 
+        print("c_emb shape after features added:", c_emb.shape)
+
         # Project context word embeddings from final_context_hidden_size -> final_hidden_size
         if self.use_exact or self.use_token:
-            c_emb = self.proj(c_emb)  # (batch_size, c_len, final_hidden_size)
+            c_emb = self.project(c_emb)  # (batch_size, c_len, final_hidden_size)
+
+        print("c_emb shape after projection layer:", c_emb.shape)
 
         c_emb = self.hwy(c_emb)  # (batch_size, c_len, final_hidden_size)
         q_emb = self.hwy(q_emb)  # (batch_size, q_len, final_hidden_size)
