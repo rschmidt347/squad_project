@@ -127,7 +127,7 @@ class BiDAF(nn.Module):
             q_emb = torch.cat([q_emb, qc_emb], dim=2)  # (batch_size, q_len, final_hidden_size = 2 * hidden_size)
 
         if self.use_token:
-            ner_emb = self.enc_ner(ner_idxs)    # (batch_size, c_len, {token_embed_size OR NUM_NER_TAGS})
+            ner_emb = self.enc_ner(ner_idxs)  # (batch_size, c_len, {token_embed_size OR NUM_NER_TAGS})
             pos_emb = self.enc_pos(pos_idxs)    # (batch_size, c_len, {token_embed_size OR NUM_POS_TAGS})
             print("c_emb has shape:", c_emb.shape)
             print("ner_emb has shape:", ner_emb.shape)
