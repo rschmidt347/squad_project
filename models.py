@@ -83,9 +83,11 @@ class BiDAF(nn.Module):
             # 3 new features: exact_orig, exact_uncased, exact_lemma
             final_context_hidden_size += 3
 
+        # Projection layer to decrease dimensions if extra features used
+        self.proj = nn.Linear(final_context_hidden_size, final_hidden_size, bias=False)
+
         # Highway Layer now outside of the Embedding layer...
         # - Allows concatenated word+char vector to be fed into Highway Layer if needed
-        self.proj = nn.Linear(final_context_hidden_size, final_hidden_size, bias=False)
 
         self.hwy = layers.HighwayEncoder(num_layers=2,
                                          hidden_size=final_hidden_size)
