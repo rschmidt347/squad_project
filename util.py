@@ -143,6 +143,16 @@ def collate_fn(examples):
             padded[i, :height, :width] = seq[:height, :width]
         return padded
 
+    def get_max_length(arrays, pad_value=0):
+        lengths = [(a != pad_value).sum() for a in arrays]
+        return max(lengths)
+
+    def merge_1d_meta(arrays, max_length, dtype=torch.int64):
+        padded = torch.zeros(len(arrays), max_length, dtype=dtype)
+        for i, seq in enumerate(arrays):
+            padded[i, :max_length] = seq[:max_length]
+        return padded
+
     num_elts = len(examples[0])
 
     if num_elts == 7:
@@ -173,8 +183,10 @@ def collate_fn(examples):
         y1s = merge_0d(y1s)
         y2s = merge_0d(y2s)
         ids = merge_0d(ids)
-        ner_idxs = merge_1d(ner_idxs)
-        pos_idxs = merge_1d(pos_idxs)
+        # Get maximum batch length of context idxs
+        max_length = get_max_length(context_idxs)
+        ner_idxs = merge_1d_meta(ner_idxs, max_length)
+        pos_idxs = merge_1d_meta(pos_idxs, max_length)
         return (context_idxs, context_char_idxs, question_idxs, question_char_idxs, y1s, y2s, ids,
                 ner_idxs, pos_idxs)
 
@@ -190,9 +202,11 @@ def collate_fn(examples):
         y1s = merge_0d(y1s)
         y2s = merge_0d(y2s)
         ids = merge_0d(ids)
-        exact_orig = merge_1d(exact_orig)
-        exact_uncased = merge_1d(exact_uncased)
-        exact_lemma = merge_1d(exact_lemma)
+        # Get maximum batch length of context idxs
+        max_length = get_max_length(context_idxs)
+        exact_orig = merge_1d_meta(exact_orig, max_length)
+        exact_uncased = merge_1d_meta(exact_uncased, max_length)
+        exact_lemma = merge_1d_meta(exact_lemma, max_length)
         return (context_idxs, context_char_idxs, question_idxs, question_char_idxs, y1s, y2s, ids,
                 exact_orig, exact_uncased, exact_lemma)
 
@@ -208,11 +222,12 @@ def collate_fn(examples):
         y1s = merge_0d(y1s)
         y2s = merge_0d(y2s)
         ids = merge_0d(ids)
-        ner_idxs = merge_1d(ner_idxs)
-        pos_idxs = merge_1d(pos_idxs)
-        exact_orig = merge_1d(exact_orig)
-        exact_uncased = merge_1d(exact_uncased)
-        exact_lemma = merge_1d(exact_lemma)
+        max_length = get_max_length(context_idxs)
+        ner_idxs = merge_1d_meta(ner_idxs, max_length)
+        pos_idxs = merge_1d_meta(pos_idxs, max_length)
+        exact_orig = merge_1d_meta(exact_orig, max_length)
+        exact_uncased = merge_1d_meta(exact_uncased, max_length)
+        exact_lemma = merge_1d_meta(exact_lemma, max_length)
         return (context_idxs, context_char_idxs, question_idxs, question_char_idxs, y1s, y2s, ids,
                 ner_idxs, pos_idxs, exact_orig, exact_uncased, exact_lemma)
 
