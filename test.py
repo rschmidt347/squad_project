@@ -67,7 +67,8 @@ def main(args):
                                   batch_size=args.batch_size,
                                   shuffle=False,
                                   num_workers=args.num_workers,
-                                  collate_fn=collate_fn)
+                                  collate_fn=collate_fn(use_token=args.use_token,
+                                                        use_exact=args.use_exact))
 
     # Evaluate
     log.info(f'Evaluating on {args.split} split...')

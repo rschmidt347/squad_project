@@ -106,7 +106,7 @@ class SQuAD(data.Dataset):
         return len(self.valid_idxs)
 
 
-def collate_fn(examples):
+def collate_fn(examples, use_token=False, use_exact=False):
     """Create batch tensors from a list of individual examples returned
     by `SQuAD.__getitem__`. Merge examples of different length by padding
     all examples to the maximum length in the batch.
@@ -114,11 +114,16 @@ def collate_fn(examples):
     Args:
         examples (list): List of tuples of the form (context_idxs, context_char_idxs,
         question_idxs, question_char_idxs, y1s, y2s, ids, ...).
+        use_token (bool): Flag to load token features: + (ner_idxs, pos_idxs)
+        use_exact (bool): Flat to load exact match features: + (exact_orig, exact_uncased, exact_lemma)
 
     Returns:
         examples (tuple): Tuple of tensors (context_idxs, context_char_idxs, question_idxs,
         question_char_idxs, y1s, y2s, ids, ...). All of shape (batch_size, ...), where
         the remaining dimensions are the maximum length of examples in the input.
+        If use_token, then appends (ner_idxs, pos_idxs).
+        If use_exact, then appends (exact_orig, exact_uncased, exact_lemma).
+        If use_token and use_exact: appends (ner_idxs, pos_idxs, exact_orig, exact_uncased, exact_lemma).
 
     Adapted from:
         https://github.com/yunjey/seq2seq-dataloader
@@ -143,9 +148,9 @@ def collate_fn(examples):
             padded[i, :height, :width] = seq[:height, :width]
         return padded
 
-    num_elts = len(examples[0])
+    # num_elts = len(examples[0])
 
-    if num_elts == 7:
+    if not use_token and not use_exact:
         # No added features
         # Group by tensor type
         context_idxs, context_char_idxs, question_idxs, question_char_idxs, y1s, y2s, ids = zip(*examples)
@@ -161,7 +166,7 @@ def collate_fn(examples):
                 question_idxs, question_char_idxs,
                 y1s, y2s, ids)
 
-    elif num_elts == 9:
+    elif use_exact and not use_token:
         # Token features only
         context_idxs, context_char_idxs, question_idxs, question_char_idxs, y1s, y2s, ids, \
             ner_idxs, pos_idxs = zip(*examples)
@@ -178,7 +183,7 @@ def collate_fn(examples):
         return (context_idxs, context_char_idxs, question_idxs, question_char_idxs, y1s, y2s, ids,
                 ner_idxs, pos_idxs)
 
-    elif num_elts == 10:
+    elif use_token and not use_exact:
         # Exact match features only
         context_idxs, context_char_idxs, question_idxs, question_char_idxs, y1s, y2s, ids, \
             exact_orig, exact_uncased, exact_lemma = zip(*examples)
@@ -196,7 +201,7 @@ def collate_fn(examples):
         return (context_idxs, context_char_idxs, question_idxs, question_char_idxs, y1s, y2s, ids,
                 exact_orig, exact_uncased, exact_lemma)
 
-    elif num_elts == 12:
+    elif use_token and use_exact:
         # All extra features
         context_idxs, context_char_idxs, question_idxs, question_char_idxs, y1s, y2s, ids, \
             ner_idxs, pos_idxs, exact_orig, exact_uncased, exact_lemma = zip(*examples)

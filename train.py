@@ -89,14 +89,16 @@ def main(args):
                                    batch_size=args.batch_size,
                                    shuffle=True,
                                    num_workers=args.num_workers,
-                                   collate_fn=collate_fn)
+                                   collate_fn=collate_fn(use_token=args.use_token,
+                                                         use_exact=args.use_exact))
     dev_dataset = SQuAD(args.dev_record_file, args.use_squad_v2,
                         use_token=args.use_token, use_exact=args.use_exact)
     dev_loader = data.DataLoader(dev_dataset,
                                  batch_size=args.batch_size,
                                  shuffle=False,
                                  num_workers=args.num_workers,
-                                 collate_fn=collate_fn)
+                                 collate_fn=collate_fn(use_token=args.use_token,
+                                                       use_exact=args.use_exact))
 
     # Train
     log.info('Training...')
