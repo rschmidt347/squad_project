@@ -85,7 +85,7 @@ class BiDAF(nn.Module):
 
         # Highway Layer now outside of the Embedding layer...
         # - Allows concatenated word+char vector to be fed into Highway Layer if needed
-        self.proj = nn.Linear(final_context_hidden_size, hidden_size, bias=False)
+        self.proj = nn.Linear(final_context_hidden_size, final_hidden_size, bias=False)
 
         self.hwy = layers.HighwayEncoder(num_layers=2,
                                          hidden_size=final_hidden_size)
