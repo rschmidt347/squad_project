@@ -161,6 +161,7 @@ class BiDAF(nn.Module):
 
         print("c_emb shape after hwy layer:", c_emb.shape)
         print("c_len shape:", c_len.shape)
+        print("c_emb type:", c_emb.dtype)
 
         # Adjust final_context_hidden_size -> final_hidden_size in enc layer
         c_enc = self.enc(c_emb, c_len)    # (batch_size, c_len, 2 * final_hidden_size)
