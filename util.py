@@ -77,12 +77,25 @@ class SQuAD(data.Dataset):
             self.ner_idxs = torch.from_numpy(dataset['ner_idxs']).long()
             self.pos_idxs = torch.from_numpy(dataset['pos_idxs']).long()
 
+            if use_v2:
+                batch_size, c_len = self.ner_idxs.size()
+                ones = torch.ones((batch_size, 1), dtype=torch.int64)
+                self.ner_idxs = torch.cat((ones, self.ner_idxs), dim=1)
+                self.pos_idxs = torch.cat((ones, self.pos_idxs), dim=1)
+
         self.use_exact = use_exact
         if self.use_exact:
             # Load exact match features
             self.exact_orig = torch.from_numpy(dataset['exact_orig_feat']).long()
             self.exact_uncased = torch.from_numpy(dataset['exact_uncased_feat']).long()
             self.exact_lemma = torch.from_numpy(dataset['exact_lemma_feat']).long()
+
+            if use_v2:
+                batch_size, c_len = self.exact_orig.size()
+                zeros = torch.zeros((batch_size, 1), dtype=torch.int64)
+                self.exact_orig = torch.cat((zeros, self.exact_orig), dim=1)
+                self.exact_uncased = torch.cat((zeros, self.exact_uncased), dim=1)
+                self.exact_lemma = torch.cat((zeros, self.exact_lemma), dim=1)
 
     def __getitem__(self, idx):
         idx = self.valid_idxs[idx]
