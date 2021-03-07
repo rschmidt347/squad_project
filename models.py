@@ -113,13 +113,9 @@ class BiDAF(nn.Module):
 
     def forward(self, cw_idxs, qw_idxs, cc_idxs=None, qc_idxs=None, ner_idxs=None, pos_idxs=None,
                 exact_orig=None, exact_uncased=None, exact_lemma=None):
-        # c_mask = torch.zeros_like(cw_idxs) != cw_idxs
-        # q_mask = torch.zeros_like(qw_idxs) != qw_idxs
-
-        c_mask = cw_idxs
-        q_mask = qw_idxs
+        c_mask = torch.zeros_like(cw_idxs) != cw_idxs
+        q_mask = torch.zeros_like(qw_idxs) != qw_idxs
         c_len, q_len = c_mask.sum(-1), q_mask.sum(-1)
-
 
         c_emb = self.emb(cw_idxs)  # (batch_size, c_len, hidden_size)
         q_emb = self.emb(qw_idxs)  # (batch_size, q_len, hidden_size)
@@ -165,6 +161,9 @@ class BiDAF(nn.Module):
 
         print("c_emb shape after hwy layer:", c_emb.shape)
         print("q_emb shape:", q_emb.shape)
+
+        print("q_emb first row:", q_emb[0])
+        print("q_len", q_len)
 
         # Adjust final_context_hidden_size -> final_hidden_size in enc layer
         q_enc = self.enc(q_emb, q_len)  # (batch_size, q_len, 2 * final_hidden_size)
