@@ -78,6 +78,7 @@ class SQuAD(data.Dataset):
             self.pos_idxs = torch.from_numpy(dataset['pos_idxs']).long()
 
             if use_v2:
+                # SQuAD 2.0: Use index 1 for no-answer token (token 1 = OOV)
                 batch_size, c_len = self.ner_idxs.size()
                 ones = torch.ones((batch_size, 1), dtype=torch.int64)
                 self.ner_idxs = torch.cat((ones, self.ner_idxs), dim=1)
@@ -91,6 +92,7 @@ class SQuAD(data.Dataset):
             self.exact_lemma = torch.from_numpy(dataset['exact_lemma_feat']).long()
 
             if use_v2:
+                # SQuAD 2.0: Use index 0 for no-answer token (token 0 = no-match)
                 batch_size, c_len = self.exact_orig.size()
                 zeros = torch.zeros((batch_size, 1), dtype=torch.int64)
                 self.exact_orig = torch.cat((zeros, self.exact_orig), dim=1)

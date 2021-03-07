@@ -74,8 +74,8 @@ class BiDAF(nn.Module):
                 final_context_hidden_size += 2 * token_embed_size
             else:
                 # One-hot-encode tokens:
-                self.enc_ner = layers.TokenEncoder(num_tags=NUM_NER_TAGS)
-                self.enc_pos = layers.TokenEncoder(num_tags=NUM_POS_TAGS)
+                #self.enc_ner = layers.TokenEncoder(num_tags=NUM_NER_TAGS)
+                #self.enc_pos = layers.TokenEncoder(num_tags=NUM_POS_TAGS)
                 #final_context_hidden_size += NUM_NER_TAGS + NUM_POS_TAGS
                 final_context_hidden_size += 2
         # If using exact features
@@ -130,11 +130,10 @@ class BiDAF(nn.Module):
         if self.use_token:
             #ner_emb = self.enc_ner(ner_idxs).float()  # (batch_size, c_len, {token_embed_size OR NUM_NER_TAGS})
             #pos_emb = self.enc_pos(pos_idxs).float()  # (batch_size, c_len, {token_embed_size OR NUM_POS_TAGS})
+
+            # Append index straight up - no one-hot
             ner_idxs = torch.unsqueeze(ner_idxs, dim=2).float()
             pos_idxs = torch.unsqueeze(pos_idxs, dim=2).float()
-            print("c_emb has shape:", c_emb.shape)
-            print("ner_emb has shape:", ner_idxs.shape)
-            print("pos_emb has shape:", pos_idxs.shape)
             c_emb = torch.cat([c_emb, ner_idxs, pos_idxs], dim=2)
             # -> (batch_size, c_len, final_context_hidden_size += {2 * token_embed_size OR (NUM_NER_TAGS+NUM_POS_TAGS)})
 
@@ -143,36 +142,20 @@ class BiDAF(nn.Module):
             exact_orig = torch.unsqueeze(exact_orig, dim=2).float()
             exact_uncased = torch.unsqueeze(exact_uncased, dim=2).float()
             exact_lemma = torch.unsqueeze(exact_lemma, dim=2).float()
-            print("c_emb has shape:", c_emb.shape)
-            print("exact_orig has shape:", exact_orig.shape)
-            print("exact_uncased has shape:", exact_uncased.shape)
-            print("exact_lemma has shape:", exact_lemma.shape)
             # -> (batch_size, c_len, 1)
             c_emb = torch.cat([c_emb, exact_orig, exact_uncased, exact_lemma], dim=2)
             # -> (batch_size, c_len, final_context_hidden_size += 3)
-
-        print("c_emb shape after features added:", c_emb.shape)
 
         # Project context word embeddings from final_context_hidden_size -> final_hidden_size
         if self.use_exact or self.use_token:
             c_emb = self.project(c_emb)  # (batch_size, c_len, final_hidden_size)
 
-        print("c_emb shape after projection layer:", c_emb.shape)
-
         c_emb = self.hwy(c_emb)  # (batch_size, c_len, final_hidden_size)
         q_emb = self.hwy(q_emb)  # (batch_size, q_len, final_hidden_size)
 
-        print("c_emb shape after hwy layer:", c_emb.shape)
-        print("q_emb shape:", q_emb.shape)
-
-        #print("q_emb first row:", q_emb[0])
-        print("q_len", q_len.shape)
-
         # Adjust final_context_hidden_size -> final_hidden_size in enc layer
         q_enc = self.enc(q_emb, q_len)  # (batch_size, q_len, 2 * final_hidden_size)
-        print("Passed q encoder!")
         c_enc = self.enc(c_emb, c_len)    # (batch_size, c_len, 2 * final_hidden_size)
-
 
         att = self.att(c_enc, q_enc,
                        c_mask, q_mask)    # (batch_size, c_len, 8 * final_hidden_size)
