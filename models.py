@@ -67,16 +67,16 @@ class BiDAF(nn.Module):
             # If x_emb -> [x_emb, x_pos, x_ner]; each word gets associated pos & ner
             if token_embed_size > 0:
                 # Embed tokens:
-                self.enc_ner = layers.TokenEncoder(num_tags=NUM_NER_TAGS+1, embed_size=token_embed_size,
+                self.enc_ner = layers.TokenEncoder(num_tags=NUM_NER_TAGS, embed_size=token_embed_size,
                                                    drop_prob=drop_prob, use_embed=True)
-                self.enc_pos = layers.TokenEncoder(num_tags=NUM_POS_TAGS+1, embed_size=token_embed_size,
+                self.enc_pos = layers.TokenEncoder(num_tags=NUM_POS_TAGS, embed_size=token_embed_size,
                                                    drop_prob=drop_prob, use_embed=True)
                 final_context_hidden_size += 2 * token_embed_size
             else:
                 # One-hot-encode tokens:
-                self.enc_ner = layers.TokenEncoder(num_tags=NUM_NER_TAGS+1)
-                self.enc_pos = layers.TokenEncoder(num_tags=NUM_POS_TAGS+1)
-                final_context_hidden_size += NUM_NER_TAGS + NUM_POS_TAGS + 2
+                self.enc_ner = layers.TokenEncoder(num_tags=NUM_NER_TAGS)
+                self.enc_pos = layers.TokenEncoder(num_tags=NUM_POS_TAGS)
+                final_context_hidden_size += NUM_NER_TAGS + NUM_POS_TAGS
         # If using exact features
         self.use_exact = use_exact
         if self.use_exact:
