@@ -163,7 +163,7 @@ class BiDAF(nn.Module):
         print("q_emb shape:", q_emb.shape)
 
         print("q_emb first row:", q_emb[0])
-        print("q_len", q_len)
+        print("q_len", q_len.shape)
 
         # Adjust final_context_hidden_size -> final_hidden_size in enc layer
         q_enc = self.enc(q_emb, q_len)  # (batch_size, q_len, 2 * final_hidden_size)
