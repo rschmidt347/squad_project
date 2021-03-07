@@ -51,7 +51,10 @@ def main(args):
                   char_vectors=char_vectors if args.use_char_embeddings else None,
                   hidden_size=args.hidden_size,
                   rnn_type=args.rnn_type,
-                  num_mod_layers=args.num_mod_layers)
+                  num_mod_layers=args.num_mod_layers,
+                  use_token=args.use_token,
+                  use_exact=args.use_exact,
+                  token_embed_size=args.token_embed_size)
 
     model = nn.DataParallel(model, gpu_ids)
     log.info(f'Loading checkpoint from {args.load_path}...')

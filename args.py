@@ -281,6 +281,11 @@ def add_train_test_args(parser):
                         type=lambda s: s.lower() in ('yes', 'y', 'true', 't', '1'),
                         default=False,
                         help='Whether to token features')
+    # - Flag for size of embedding for NER and POS
+    parser.add_argument('--token_embed_size',
+                        type=int,
+                        default=0,
+                        help='Size of embedding for NER and POS.')
 
 
 def get_add_feat_args():

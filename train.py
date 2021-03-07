@@ -57,7 +57,8 @@ def main(args):
                   rnn_type=args.rnn_type,
                   num_mod_layers=args.num_mod_layers,
                   use_token=args.use_token,
-                  use_exact=args.use_exact)
+                  use_exact=args.use_exact,
+                  token_embed_size=args.token_embed_size)
 
     model = nn.DataParallel(model, args.gpu_ids)
     if args.load_path:
