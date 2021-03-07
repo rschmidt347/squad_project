@@ -76,7 +76,8 @@ class BiDAF(nn.Module):
                 # One-hot-encode tokens:
                 self.enc_ner = layers.TokenEncoder(num_tags=NUM_NER_TAGS)
                 self.enc_pos = layers.TokenEncoder(num_tags=NUM_POS_TAGS)
-                final_context_hidden_size += NUM_NER_TAGS + NUM_POS_TAGS
+                #final_context_hidden_size += NUM_NER_TAGS + NUM_POS_TAGS
+                final_context_hidden_size += 2
         # If using exact features
         self.use_exact = use_exact
         if self.use_exact:
@@ -129,16 +130,12 @@ class BiDAF(nn.Module):
         if self.use_token:
             #ner_emb = self.enc_ner(ner_idxs).float()  # (batch_size, c_len, {token_embed_size OR NUM_NER_TAGS})
             #pos_emb = self.enc_pos(pos_idxs).float()  # (batch_size, c_len, {token_embed_size OR NUM_POS_TAGS})
-            batch_size, seq_len = ner_idxs.shape
-            ner_idxs = torch.unsqueeze(ner_idxs, 2)
-            ner_emb = torch.zeros(batch_size, seq_len, NUM_NER_TAGS, device=ner_idxs.device).scatter_(2, ner_idxs, 1)
-            batch_size, seq_len = pos_idxs.shape
-            pos_idxs = torch.unsqueeze(pos_idxs, 2)
-            pos_emb = torch.zeros(batch_size, seq_len, NUM_POS_TAGS, device=pos_idxs.device).scatter_(2, pos_idxs, 1)
+            ner_idxs = torch.unsqueeze(ner_idxs, dim=2).float()
+            pos_idxs = torch.unsqueeze(pos_idxs, dim=2).float()
             print("c_emb has shape:", c_emb.shape)
-            print("ner_emb has shape:", ner_emb.shape)
-            print("pos_emb has shape:", pos_emb.shape)
-            c_emb = torch.cat([c_emb, ner_emb, pos_emb], dim=2)
+            print("ner_emb has shape:", ner_idxs.shape)
+            print("pos_emb has shape:", pos_idxs.shape)
+            c_emb = torch.cat([c_emb, ner_idxs, pos_idxs], dim=2)
             # -> (batch_size, c_len, final_context_hidden_size += {2 * token_embed_size OR (NUM_NER_TAGS+NUM_POS_TAGS)})
 
         if self.use_exact:
