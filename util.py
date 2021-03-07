@@ -106,7 +106,7 @@ class SQuAD(data.Dataset):
         return len(self.valid_idxs)
 
 
-def collate_fn(examples, use_token=False, use_exact=False):
+def collate_fn(examples):
     """Create batch tensors from a list of individual examples returned
     by `SQuAD.__getitem__`. Merge examples of different length by padding
     all examples to the maximum length in the batch.
@@ -148,25 +148,67 @@ def collate_fn(examples, use_token=False, use_exact=False):
             padded[i, :height, :width] = seq[:height, :width]
         return padded
 
-    # num_elts = len(examples[0])
+    # No added features
+    # Group by tensor type
+    context_idxs, context_char_idxs, question_idxs, question_char_idxs, y1s, y2s, ids = zip(*examples)
+    # Merge into batch tensors
+    context_idxs = merge_1d(context_idxs)
+    context_char_idxs = merge_2d(context_char_idxs)
+    question_idxs = merge_1d(question_idxs)
+    question_char_idxs = merge_2d(question_char_idxs)
+    y1s = merge_0d(y1s)
+    y2s = merge_0d(y2s)
+    ids = merge_0d(ids)
+    return (context_idxs, context_char_idxs,
+            question_idxs, question_char_idxs,
+            y1s, y2s, ids)
 
-    if not use_token and not use_exact:
-        # No added features
-        # Group by tensor type
-        context_idxs, context_char_idxs, question_idxs, question_char_idxs, y1s, y2s, ids = zip(*examples)
-        # Merge into batch tensors
-        context_idxs = merge_1d(context_idxs)
-        context_char_idxs = merge_2d(context_char_idxs)
-        question_idxs = merge_1d(question_idxs)
-        question_char_idxs = merge_2d(question_char_idxs)
-        y1s = merge_0d(y1s)
-        y2s = merge_0d(y2s)
-        ids = merge_0d(ids)
-        return (context_idxs, context_char_idxs,
-                question_idxs, question_char_idxs,
-                y1s, y2s, ids)
 
-    elif use_exact and not use_token:
+def full_collate_fn(use_exact=True, use_token=True):
+    """Default collate function adapted to include extra features. As before,
+    create batch tensors from a list of individual examples returned
+    by `SQuAD.__getitem__`. Merge examples of different length by padding
+    all examples to the maximum length in the batch.
+
+
+    Args:
+        examples (list): List of tuples of the form (context_idxs, context_char_idxs,
+        question_idxs, question_char_idxs, y1s, y2s, ids, ...).
+        use_token (bool): Flag to load token features: + (ner_idxs, pos_idxs)
+        use_exact (bool): Flat to load exact match features: + (exact_orig, exact_uncased, exact_lemma)
+
+    Returns:
+        examples (tuple): Tuple of tensors (context_idxs, context_char_idxs, question_idxs,
+        question_char_idxs, y1s, y2s, ids, ...). All of shape (batch_size, ...), where
+        the remaining dimensions are the maximum length of examples in the input.
+        If use_token, then appends (ner_idxs, pos_idxs).
+        If use_exact, then appends (exact_orig, exact_uncased, exact_lemma).
+        If use_token and use_exact: appends (ner_idxs, pos_idxs, exact_orig, exact_uncased, exact_lemma).
+
+    Adapted from:
+        https://github.com/yunjey/seq2seq-dataloader
+    """
+    def merge_0d(scalars, dtype=torch.int64):
+        return torch.tensor(scalars, dtype=dtype)
+
+    def merge_1d(arrays, dtype=torch.int64, pad_value=0):
+        lengths = [(a != pad_value).sum() for a in arrays]
+        padded = torch.zeros(len(arrays), max(lengths), dtype=dtype)
+        for i, seq in enumerate(arrays):
+            end = lengths[i]
+            padded[i, :end] = seq[:end]
+        return padded
+
+    def merge_2d(matrices, dtype=torch.int64, pad_value=0):
+        heights = [(m.sum(1) != pad_value).sum() for m in matrices]
+        widths = [(m.sum(0) != pad_value).sum() for m in matrices]
+        padded = torch.zeros(len(matrices), max(heights), max(widths), dtype=dtype)
+        for i, seq in enumerate(matrices):
+            height, width = heights[i], widths[i]
+            padded[i, :height, :width] = seq[:height, :width]
+        return padded
+
+    if use_exact and not use_token:
         # Token features only
         context_idxs, context_char_idxs, question_idxs, question_char_idxs, y1s, y2s, ids, \
             ner_idxs, pos_idxs = zip(*examples)

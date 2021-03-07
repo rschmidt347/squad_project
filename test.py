@@ -26,7 +26,7 @@ from os.path import join
 from tensorboardX import SummaryWriter
 from tqdm import tqdm
 from ujson import load as json_load
-from util import collate_fn, SQuAD
+from util import collate_fn, full_collate_fn, SQuAD
 
 
 def main(args):
@@ -63,12 +63,16 @@ def main(args):
     log.info('Building dataset...')
     record_file = vars(args)[f'{args.split}_record_file']
     dataset = SQuAD(record_file, args.use_squad_v2)
+    if args.use_exact or args.use_token:
+        collater = full_collate_fn(use_exact=args.use_exact,
+                                   use_token=args.use_token)
+    else:
+        collater = collate_fn
     data_loader = data.DataLoader(dataset,
                                   batch_size=args.batch_size,
                                   shuffle=False,
                                   num_workers=args.num_workers,
-                                  collate_fn=collate_fn(use_token=args.use_token,
-                                                        use_exact=args.use_exact))
+                                  collate_fn=collater)
 
     # Evaluate
     log.info(f'Evaluating on {args.split} split...')
