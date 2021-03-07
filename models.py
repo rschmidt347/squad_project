@@ -119,13 +119,14 @@ class BiDAF(nn.Module):
 
         c_emb = self.emb(cw_idxs)  # (batch_size, c_len, hidden_size)
         q_emb = self.emb(qw_idxs)  # (batch_size, q_len, hidden_size)
+        print("c_emb original type:", c_emb.dtype)
 
         if self.use_char_embeddings:
             cc_emb = self.char_emb(cc_idxs)  # (batch_size, c_len, hidden_size)
             qc_emb = self.char_emb(qc_idxs)  # (batch_size, q_len, hidden_size)
             c_emb = torch.cat([c_emb, cc_emb], dim=2)  # (batch_size, c_len, final_context_hidden_size = 2*hidden_size)
             q_emb = torch.cat([q_emb, qc_emb], dim=2)  # (batch_size, q_len, final_hidden_size = 2 * hidden_size)
-            print("c_emb shape after char embeds added:", c_emb.dtype)
+            print("c_emb type after char embeds added:", c_emb.dtype)
 
         if self.use_token:
             ner_emb = self.enc_ner(ner_idxs)    # (batch_size, c_len, {token_embed_size OR NUM_NER_TAGS})
