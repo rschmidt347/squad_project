@@ -110,12 +110,15 @@ def main(args):
                 tqdm(total=len(train_loader.dataset)) as progress_bar:
             for example in train_loader:
 
+                print("Example length:", len(example))
+
                 cw_idxs, cc_idxs, qw_idxs, qc_idxs, y1, y2, ids = example[:7]
 
                 ner_idxs, pos_idxs = None, None
                 exact_orig, exact_uncased, exact_lemma = None, None, None
                 if args.use_token:
                     ner_idxs, pos_idxs = example[7:9]
+                    print("ner_idxs shape", ner_idxs.shape)
                     ner_idxs = ner_idxs.to(device)
                     pos_idxs = pos_idxs.to(device)
                     if args.use_exact:
