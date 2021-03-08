@@ -41,7 +41,7 @@ class SQuAD(data.Dataset):
         data_path (str): Path to .npz file containing pre-processed dataset.
         use_v2 (bool): Whether to use SQuAD 2.0 questions. Otherwise only use SQuAD 1.1.
     """
-    def __init__(self, data_path, use_v2=True):
+    def __init__(self, data_path, use_v2=True, use_token=False, use_exact=False):
         super(SQuAD, self).__init__()
 
         dataset = np.load(data_path)
@@ -71,6 +71,34 @@ class SQuAD(data.Dataset):
         self.valid_idxs = [idx for idx in range(len(self.ids))
                            if use_v2 or self.y1s[idx].item() >= 0]
 
+        self.use_token = use_token
+        if self.use_token:
+            # Load indices for token features
+            self.ner_idxs = torch.from_numpy(dataset['ner_idxs']).long()
+            self.pos_idxs = torch.from_numpy(dataset['pos_idxs']).long()
+
+            if use_v2:
+                # SQuAD 2.0: Use index 1 for no-answer token (token 1 = OOV)
+                batch_size, c_len = self.ner_idxs.size()
+                ones = torch.ones((batch_size, 1), dtype=torch.int64)
+                self.ner_idxs = torch.cat((ones, self.ner_idxs), dim=1)
+                self.pos_idxs = torch.cat((ones, self.pos_idxs), dim=1)
+
+        self.use_exact = use_exact
+        if self.use_exact:
+            # Load exact match features
+            self.exact_orig = torch.from_numpy(dataset['exact_orig_feat']).long()
+            self.exact_uncased = torch.from_numpy(dataset['exact_uncased_feat']).long()
+            self.exact_lemma = torch.from_numpy(dataset['exact_lemma_feat']).long()
+
+            if use_v2:
+                # SQuAD 2.0: Use index 0 for no-answer token (token 0 = no-match)
+                batch_size, c_len = self.exact_orig.size()
+                zeros = torch.zeros((batch_size, 1), dtype=torch.int64)
+                self.exact_orig = torch.cat((zeros, self.exact_orig), dim=1)
+                self.exact_uncased = torch.cat((zeros, self.exact_uncased), dim=1)
+                self.exact_lemma = torch.cat((zeros, self.exact_lemma), dim=1)
+
     def __getitem__(self, idx):
         idx = self.valid_idxs[idx]
         example = (self.context_idxs[idx],
@@ -80,6 +108,12 @@ class SQuAD(data.Dataset):
                    self.y1s[idx],
                    self.y2s[idx],
                    self.ids[idx])
+
+        if self.use_token:
+            example += (self.ner_idxs[idx], self.pos_idxs[idx])
+
+        if self.use_exact:
+            example += (self.exact_orig[idx], self.exact_uncased[idx], self.exact_lemma[idx])
 
         return example
 
@@ -94,11 +128,11 @@ def collate_fn(examples):
 
     Args:
         examples (list): List of tuples of the form (context_idxs, context_char_idxs,
-        question_idxs, question_char_idxs, y1s, y2s, ids).
+        question_idxs, question_char_idxs, y1s, y2s, ids, ...).
 
     Returns:
         examples (tuple): Tuple of tensors (context_idxs, context_char_idxs, question_idxs,
-        question_char_idxs, y1s, y2s, ids). All of shape (batch_size, ...), where
+        question_char_idxs, y1s, y2s, ids, ...). All of shape (batch_size, ...), where
         the remaining dimensions are the maximum length of examples in the input.
 
     Adapted from:
@@ -124,23 +158,93 @@ def collate_fn(examples):
             padded[i, :height, :width] = seq[:height, :width]
         return padded
 
-    # Group by tensor type
-    context_idxs, context_char_idxs, \
-        question_idxs, question_char_idxs, \
-        y1s, y2s, ids = zip(*examples)
+    def get_max_length(arrays, pad_value=0):
+        lengths = [(a != pad_value).sum() for a in arrays]
+        return max(lengths)
 
-    # Merge into batch tensors
-    context_idxs = merge_1d(context_idxs)
-    context_char_idxs = merge_2d(context_char_idxs)
-    question_idxs = merge_1d(question_idxs)
-    question_char_idxs = merge_2d(question_char_idxs)
-    y1s = merge_0d(y1s)
-    y2s = merge_0d(y2s)
-    ids = merge_0d(ids)
+    def merge_1d_meta(arrays, max_length, dtype=torch.int64):
+        padded = torch.zeros(len(arrays), max_length, dtype=dtype)
+        for i, seq in enumerate(arrays):
+            padded[i, :max_length] = seq[:max_length]
+        return padded
 
-    return (context_idxs, context_char_idxs,
-            question_idxs, question_char_idxs,
-            y1s, y2s, ids)
+    num_elts = len(examples[0])
+
+    if num_elts == 7:
+        # No added features
+        # Group by tensor type
+        context_idxs, context_char_idxs, question_idxs, question_char_idxs, y1s, y2s, ids = zip(*examples)
+        # Merge into batch tensors
+        context_idxs = merge_1d(context_idxs)
+        context_char_idxs = merge_2d(context_char_idxs)
+        question_idxs = merge_1d(question_idxs)
+        question_char_idxs = merge_2d(question_char_idxs)
+        y1s = merge_0d(y1s)
+        y2s = merge_0d(y2s)
+        ids = merge_0d(ids)
+        return (context_idxs, context_char_idxs,
+                question_idxs, question_char_idxs,
+                y1s, y2s, ids)
+
+    elif num_elts == 9:
+        # Token features only
+        context_idxs, context_char_idxs, question_idxs, question_char_idxs, y1s, y2s, ids, \
+            ner_idxs, pos_idxs = zip(*examples)
+        # Merge into batch tensors
+        context_idxs = merge_1d(context_idxs)
+        context_char_idxs = merge_2d(context_char_idxs)
+        question_idxs = merge_1d(question_idxs)
+        question_char_idxs = merge_2d(question_char_idxs)
+        y1s = merge_0d(y1s)
+        y2s = merge_0d(y2s)
+        ids = merge_0d(ids)
+        # Get maximum batch length of context idxs
+        max_length = get_max_length(context_idxs)
+        ner_idxs = merge_1d_meta(ner_idxs, max_length)
+        pos_idxs = merge_1d_meta(pos_idxs, max_length)
+        return (context_idxs, context_char_idxs, question_idxs, question_char_idxs, y1s, y2s, ids,
+                ner_idxs, pos_idxs)
+
+    elif num_elts == 10:
+        # Exact match features only
+        context_idxs, context_char_idxs, question_idxs, question_char_idxs, y1s, y2s, ids, \
+            exact_orig, exact_uncased, exact_lemma = zip(*examples)
+        # Merge into batch tensors
+        context_idxs = merge_1d(context_idxs)
+        context_char_idxs = merge_2d(context_char_idxs)
+        question_idxs = merge_1d(question_idxs)
+        question_char_idxs = merge_2d(question_char_idxs)
+        y1s = merge_0d(y1s)
+        y2s = merge_0d(y2s)
+        ids = merge_0d(ids)
+        # Get maximum batch length of context idxs
+        max_length = get_max_length(context_idxs)
+        exact_orig = merge_1d_meta(exact_orig, max_length)
+        exact_uncased = merge_1d_meta(exact_uncased, max_length)
+        exact_lemma = merge_1d_meta(exact_lemma, max_length)
+        return (context_idxs, context_char_idxs, question_idxs, question_char_idxs, y1s, y2s, ids,
+                exact_orig, exact_uncased, exact_lemma)
+
+    elif num_elts == 12:
+        # All extra features
+        context_idxs, context_char_idxs, question_idxs, question_char_idxs, y1s, y2s, ids, \
+            ner_idxs, pos_idxs, exact_orig, exact_uncased, exact_lemma = zip(*examples)
+        # Merge into batch tensors
+        context_idxs = merge_1d(context_idxs)
+        context_char_idxs = merge_2d(context_char_idxs)
+        question_idxs = merge_1d(question_idxs)
+        question_char_idxs = merge_2d(question_char_idxs)
+        y1s = merge_0d(y1s)
+        y2s = merge_0d(y2s)
+        ids = merge_0d(ids)
+        max_length = get_max_length(context_idxs)
+        ner_idxs = merge_1d_meta(ner_idxs, max_length)
+        pos_idxs = merge_1d_meta(pos_idxs, max_length)
+        exact_orig = merge_1d_meta(exact_orig, max_length)
+        exact_uncased = merge_1d_meta(exact_uncased, max_length)
+        exact_lemma = merge_1d_meta(exact_lemma, max_length)
+        return (context_idxs, context_char_idxs, question_idxs, question_char_idxs, y1s, y2s, ids,
+                ner_idxs, pos_idxs, exact_orig, exact_uncased, exact_lemma)
 
 
 class AverageMeter:
@@ -723,3 +827,5 @@ def compute_f1(a_gold, a_pred):
     recall = 1.0 * num_same / len(gold_toks)
     f1 = (2 * precision * recall) / (precision + recall)
     return f1
+
+
