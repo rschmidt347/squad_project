@@ -1,0 +1,34 @@
+[03.08.21 18:33:54] Args: {
+    "batch_size": 64,
+    "char_emb_file": "./data/char_emb.json",
+    "dev_eval_file": "./data/dev_w_add_eval.json",
+    "dev_record_file": "./data/dev_w_add_rec.npz",
+    "hidden_size": 100,
+    "load_path": "./save/train/char_all_add_feat-01/best.pth.tar",
+    "max_ans_len": 15,
+    "name": "char_all_add_feat",
+    "num_mod_layers": 2,
+    "num_visuals": 10,
+    "num_workers": 4,
+    "rnn_type": "LSTM",
+    "save_dir": "./save/test/char_all_add_feat-01",
+    "split": "dev",
+    "sub_file": "submission.csv",
+    "test_eval_file": "./data/test_w_add_eval.json",
+    "test_record_file": "./data/test_w_add_rec.npz",
+    "token_embed_size": 0,
+    "train_eval_file": "./data/train_w_add_eval.json",
+    "train_record_file": "./data/train_w_add_rec.npz",
+    "use_char_embeddings": true,
+    "use_exact": true,
+    "use_squad_v2": true,
+    "use_token": true,
+    "word_emb_file": "./data/word_emb.json"
+}
+[03.08.21 18:33:54] Loading embeddings...
+[03.08.21 18:33:59] Building model...
+[03.08.21 18:34:00] Loading checkpoint from ./save/train/char_all_add_feat-01/best.pth.tar...
+[03.08.21 18:34:01] Building dataset...
+[03.08.21 18:34:01] Evaluating on dev split...
+[03.08.21 18:34:24] Dev NLL: 02.55, F1: 66.10, EM: 62.88, AvNA: 72.37
+[03.08.21 18:34:25] Writing submission file to ./save/test/char_all_add_feat-01/dev_submission.csv...
