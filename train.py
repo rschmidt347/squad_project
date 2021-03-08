@@ -49,12 +49,17 @@ def main(args):
 
     # Get model
     log.info('Building model...')
+
     model = BiDAF(word_vectors=word_vectors,
                   char_vectors=char_vectors if args.use_char_embeddings else None,
                   hidden_size=args.hidden_size,
                   drop_prob=args.drop_prob,
                   rnn_type=args.rnn_type,
-                  num_mod_layers=args.num_mod_layers)
+                  num_mod_layers=args.num_mod_layers,
+                  use_token=args.use_token,
+                  use_exact=args.use_exact,
+                  token_embed_size=args.token_embed_size)
+
     model = nn.DataParallel(model, args.gpu_ids)
     if args.load_path:
         log.info(f'Loading checkpoint from {args.load_path}...')
@@ -79,13 +84,15 @@ def main(args):
 
     # Get data loader
     log.info('Building dataset...')
-    train_dataset = SQuAD(args.train_record_file, args.use_squad_v2)
+    train_dataset = SQuAD(args.train_record_file, args.use_squad_v2,
+                          use_token=args.use_token, use_exact=args.use_exact)
     train_loader = data.DataLoader(train_dataset,
                                    batch_size=args.batch_size,
                                    shuffle=True,
                                    num_workers=args.num_workers,
                                    collate_fn=collate_fn)
-    dev_dataset = SQuAD(args.dev_record_file, args.use_squad_v2)
+    dev_dataset = SQuAD(args.dev_record_file, args.use_squad_v2,
+                        use_token=args.use_token, use_exact=args.use_exact)
     dev_loader = data.DataLoader(dev_dataset,
                                  batch_size=args.batch_size,
                                  shuffle=False,
@@ -101,21 +108,49 @@ def main(args):
         log.info(f'Starting epoch {epoch}...')
         with torch.enable_grad(), \
                 tqdm(total=len(train_loader.dataset)) as progress_bar:
-            for cw_idxs, cc_idxs, qw_idxs, qc_idxs, y1, y2, ids in train_loader:
+            for example in train_loader:
+
+                cw_idxs, cc_idxs, qw_idxs, qc_idxs, y1, y2, ids = example[:7]
+
+                ner_idxs, pos_idxs = None, None
+                exact_orig, exact_uncased, exact_lemma = None, None, None
+                if args.use_token:
+                    ner_idxs, pos_idxs = example[7:9]
+                    ner_idxs = ner_idxs.to(device)
+                    pos_idxs = pos_idxs.to(device)
+                    if args.use_exact:
+                        # Token features present, so splice example at later index
+                        exact_orig, exact_uncased, exact_lemma = example[9:]
+                        exact_orig = exact_orig.to(device)
+                        exact_uncased = exact_uncased.to(device)
+                        exact_lemma = exact_lemma.to(device)
+                else:
+                    if args.use_exact:
+                        # Token features present, so splice example at earlier index
+                        exact_orig, exact_uncased, exact_lemma = example[7:]
+                        exact_orig = exact_orig.to(device)
+                        exact_uncased = exact_uncased.to(device)
+                        exact_lemma = exact_lemma.to(device)
+
                 # Setup for forward
                 cw_idxs = cw_idxs.to(device)
                 qw_idxs = qw_idxs.to(device)
                 if args.use_char_embeddings:
                     cc_idxs = cc_idxs.to(device)
                     qc_idxs = qc_idxs.to(device)
+
                 batch_size = cw_idxs.size(0)
                 optimizer.zero_grad()
 
                 # Forward
                 if args.use_char_embeddings:
-                    log_p1, log_p2 = model(cw_idxs, qw_idxs, cc_idxs, qc_idxs)
+                    log_p1, log_p2 = model(cw_idxs, qw_idxs, cc_idxs, qc_idxs,
+                                           ner_idxs=ner_idxs, pos_idxs=pos_idxs,
+                                           exact_orig=exact_orig, exact_uncased=exact_uncased, exact_lemma=exact_lemma)
                 else:
-                    log_p1, log_p2 = model(cw_idxs, qw_idxs)
+                    log_p1, log_p2 = model(cw_idxs, qw_idxs,
+                                           ner_idxs=ner_idxs, pos_idxs=pos_idxs,
+                                           exact_orig=exact_orig, exact_uncased=exact_uncased, exact_lemma=exact_lemma)
                 y1, y2 = y1.to(device), y2.to(device)
                 loss = F.nll_loss(log_p1, y1) + F.nll_loss(log_p2, y2)
                 loss_val = loss.item()
@@ -148,7 +183,9 @@ def main(args):
                                                   args.dev_eval_file,
                                                   args.max_ans_len,
                                                   args.use_squad_v2,
-                                                  args.use_char_embeddings)
+                                                  args.use_char_embeddings,
+                                                  args.use_token,
+                                                  args.use_exact)
                     saver.save(step, model, results[args.metric_name], device)
                     ema.resume(model)
 
@@ -168,7 +205,8 @@ def main(args):
                                    num_visuals=args.num_visuals)
 
 
-def evaluate(model, data_loader, device, eval_file, max_len, use_squad_v2, use_char_embeddings):
+def evaluate(model, data_loader, device, eval_file, max_len, use_squad_v2, use_char_embeddings,
+             use_token=False, use_exact=False):
     nll_meter = util.AverageMeter()
 
     model.eval()
@@ -177,7 +215,30 @@ def evaluate(model, data_loader, device, eval_file, max_len, use_squad_v2, use_c
         gold_dict = json_load(fh)
     with torch.no_grad(), \
             tqdm(total=len(data_loader.dataset)) as progress_bar:
-        for cw_idxs, cc_idxs, qw_idxs, qc_idxs, y1, y2, ids in data_loader:
+        for example in data_loader:
+
+            cw_idxs, cc_idxs, qw_idxs, qc_idxs, y1, y2, ids = example[:7]
+
+            ner_idxs, pos_idxs = None, None
+            exact_orig, exact_uncased, exact_lemma = None, None, None
+            if use_token:
+                ner_idxs, pos_idxs = example[7:9]
+                ner_idxs = ner_idxs.to(device)
+                pos_idxs = pos_idxs.to(device)
+                if use_exact:
+                    # Token features present, so splice example at later index
+                    exact_orig, exact_uncased, exact_lemma = example[9:]
+                    exact_orig = exact_orig.to(device)
+                    exact_uncased = exact_uncased.to(device)
+                    exact_lemma = exact_lemma.to(device)
+            else:
+                if use_exact:
+                    # Token features present, so splice example at earlier index
+                    exact_orig, exact_uncased, exact_lemma = example[7:]
+                    exact_orig = exact_orig.to(device)
+                    exact_uncased = exact_uncased.to(device)
+                    exact_lemma = exact_lemma.to(device)
+
             # Setup for forward
             cw_idxs = cw_idxs.to(device)
             qw_idxs = qw_idxs.to(device)
@@ -188,9 +249,14 @@ def evaluate(model, data_loader, device, eval_file, max_len, use_squad_v2, use_c
 
             # Forward
             if use_char_embeddings:
-                log_p1, log_p2 = model(cw_idxs, qw_idxs, cc_idxs, qc_idxs)
+                log_p1, log_p2 = model(cw_idxs, qw_idxs, cc_idxs, qc_idxs,
+                                       ner_idxs=ner_idxs, pos_idxs=pos_idxs,
+                                       exact_orig=exact_orig, exact_uncased=exact_uncased, exact_lemma=exact_lemma)
             else:
-                log_p1, log_p2 = model(cw_idxs, qw_idxs)
+                log_p1, log_p2 = model(cw_idxs, qw_idxs,
+                                       ner_idxs=ner_idxs, pos_idxs=pos_idxs,
+                                       exact_orig=exact_orig, exact_uncased=exact_uncased, exact_lemma=exact_lemma)
+
             y1, y2 = y1.to(device), y2.to(device)
             loss = F.nll_loss(log_p1, y1) + F.nll_loss(log_p2, y2)
             nll_meter.update(loss.item(), batch_size)

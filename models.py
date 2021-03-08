@@ -9,6 +9,10 @@ import torch
 import torch.nn as nn
 
 
+NUM_NER_TAGS = 52
+NUM_POS_TAGS = 21
+
+
 class BiDAF(nn.Module):
     """Baseline BiDAF model for SQuAD.
 
@@ -30,9 +34,13 @@ class BiDAF(nn.Module):
         drop_prob (float): Dropout probability.
         rnn_type (str): RNN architecture used for encoder layer; one of 'LSTM' or 'GRU'.
         char_vectors (torch.Tensor): Pre-trained character vectors.
+        use_token (bool): Flag for using token features (NER, POS)
+        token_embed_size (int): Size of embedding for NER/POS; 0 if using one-hot-encoding
+        use_exact (bool): Flag for using exact match features (original, uncased, lemma)
     """
     def __init__(self, word_vectors, hidden_size,
-                 drop_prob=0., rnn_type='LSTM', num_mod_layers=2, char_vectors=None):
+                 drop_prob=0., rnn_type='LSTM', num_mod_layers=2, char_vectors=None,
+                 use_token=False, token_embed_size=0, use_exact=False):
         super(BiDAF, self).__init__()
         # Use character embeddings if fed into the BiDAF model
         self.use_char_embeddings = True if char_vectors is not None else False
@@ -40,6 +48,8 @@ class BiDAF(nn.Module):
                                     hidden_size=hidden_size,
                                     drop_prob=drop_prob)
 
+        # Variable to keep track of original hidden size
+        final_hidden_size = hidden_size
         # If using character embeddings, feed through char-CNN to get word-level embeddings
         if self.use_char_embeddings:
             # Using char_out_size = hidden size as in original BiDAF paper
@@ -47,13 +57,39 @@ class BiDAF(nn.Module):
                                                  char_out_size=hidden_size,
                                                  drop_prob=drop_prob)
             # If concat [embed, char_embed], then final_hidden_size = hidden_size + char_out_size
-            final_hidden_size = 2 * hidden_size  # since char_out_size = hidden_size
-        else:
-            # Otherwise, hidden size just reflects word hidden size = hidden_size
-            final_hidden_size = hidden_size
+            final_hidden_size += hidden_size  # since char_out_size = hidden_size
+
+        # Now, account for tagged features
+        final_context_hidden_size = final_hidden_size
+        # If using NER and POS, feed through embedding
+        self.use_token = use_token
+        if self.use_token:
+            # If x_emb -> [x_emb, x_pos, x_ner]; each word gets associated pos & ner
+            if token_embed_size > 0:
+                # Embed tokens:
+                self.enc_ner = layers.TokenEncoder(num_tags=NUM_NER_TAGS, embed_size=token_embed_size,
+                                                   drop_prob=drop_prob, use_embed=True)
+                self.enc_pos = layers.TokenEncoder(num_tags=NUM_POS_TAGS, embed_size=token_embed_size,
+                                                   drop_prob=drop_prob, use_embed=True)
+                final_context_hidden_size += 2 * token_embed_size
+            else:
+                # One-hot-encode tokens:
+                #self.enc_ner = layers.TokenEncoder(num_tags=NUM_NER_TAGS)
+                #self.enc_pos = layers.TokenEncoder(num_tags=NUM_POS_TAGS)
+                #final_context_hidden_size += NUM_NER_TAGS + NUM_POS_TAGS
+                final_context_hidden_size += 2
+        # If using exact features
+        self.use_exact = use_exact
+        if self.use_exact:
+            # 3 new features: exact_orig, exact_uncased, exact_lemma
+            final_context_hidden_size += 3
+
+        # Projection layer to decrease dimensions if extra features used
+        self.project = nn.Linear(final_context_hidden_size, final_hidden_size, bias=False)
 
         # Highway Layer now outside of the Embedding layer...
         # - Allows concatenated word+char vector to be fed into Highway Layer if needed
+
         self.hwy = layers.HighwayEncoder(num_layers=2,
                                          hidden_size=final_hidden_size)
 
@@ -76,25 +112,50 @@ class BiDAF(nn.Module):
                                       drop_prob=drop_prob,
                                       rnn_type=rnn_type)
 
-    def forward(self, cw_idxs, qw_idxs, cc_idxs=None, qc_idxs=None):
+    def forward(self, cw_idxs, qw_idxs, cc_idxs=None, qc_idxs=None, ner_idxs=None, pos_idxs=None,
+                exact_orig=None, exact_uncased=None, exact_lemma=None):
         c_mask = torch.zeros_like(cw_idxs) != cw_idxs
         q_mask = torch.zeros_like(qw_idxs) != qw_idxs
         c_len, q_len = c_mask.sum(-1), q_mask.sum(-1)
 
-        c_emb = self.emb(cw_idxs)         # (batch_size, c_len, hidden_size)
-        q_emb = self.emb(qw_idxs)         # (batch_size, q_len, hidden_size)
+        c_emb = self.emb(cw_idxs)  # (batch_size, c_len, hidden_size)
+        q_emb = self.emb(qw_idxs)  # (batch_size, q_len, hidden_size)
 
         if self.use_char_embeddings:
             cc_emb = self.char_emb(cc_idxs)  # (batch_size, c_len, hidden_size)
             qc_emb = self.char_emb(qc_idxs)  # (batch_size, q_len, hidden_size)
-            c_emb = torch.cat([c_emb, cc_emb], dim=2)  # (batch_size, c_len, final_hidden_size = 2 * hidden_size)
-            q_emb = torch.cat([q_emb, qc_emb], dim=2)  # (batch_size, q_len, final_hidden_size)
+            c_emb = torch.cat([c_emb, cc_emb], dim=2)  # (batch_size, c_len, final_context_hidden_size = 2*hidden_size)
+            q_emb = torch.cat([q_emb, qc_emb], dim=2)  # (batch_size, q_len, final_hidden_size = 2 * hidden_size)
+
+        if self.use_token:
+            #ner_emb = self.enc_ner(ner_idxs).float()  # (batch_size, c_len, {token_embed_size OR NUM_NER_TAGS})
+            #pos_emb = self.enc_pos(pos_idxs).float()  # (batch_size, c_len, {token_embed_size OR NUM_POS_TAGS})
+
+            # Append index straight up - no one-hot
+            ner_idxs = torch.unsqueeze(ner_idxs, dim=2).float()
+            pos_idxs = torch.unsqueeze(pos_idxs, dim=2).float()
+            c_emb = torch.cat([c_emb, ner_idxs, pos_idxs], dim=2)
+            # -> (batch_size, c_len, final_context_hidden_size += {2 * token_embed_size OR (NUM_NER_TAGS+NUM_POS_TAGS)})
+
+        if self.use_exact:
+            # exact_{orig, uncased, lemma} all have dimensions: (batch_size, c_len)
+            exact_orig = torch.unsqueeze(exact_orig, dim=2).float()
+            exact_uncased = torch.unsqueeze(exact_uncased, dim=2).float()
+            exact_lemma = torch.unsqueeze(exact_lemma, dim=2).float()
+            # -> (batch_size, c_len, 1)
+            c_emb = torch.cat([c_emb, exact_orig, exact_uncased, exact_lemma], dim=2)
+            # -> (batch_size, c_len, final_context_hidden_size += 3)
+
+        # Project context word embeddings from final_context_hidden_size -> final_hidden_size
+        if self.use_exact or self.use_token:
+            c_emb = self.project(c_emb)  # (batch_size, c_len, final_hidden_size)
 
         c_emb = self.hwy(c_emb)  # (batch_size, c_len, final_hidden_size)
         q_emb = self.hwy(q_emb)  # (batch_size, q_len, final_hidden_size)
 
+        # Adjust final_context_hidden_size -> final_hidden_size in enc layer
+        q_enc = self.enc(q_emb, q_len)  # (batch_size, q_len, 2 * final_hidden_size)
         c_enc = self.enc(c_emb, c_len)    # (batch_size, c_len, 2 * final_hidden_size)
-        q_enc = self.enc(q_emb, q_len)    # (batch_size, q_len, 2 * final_hidden_size)
 
         att = self.att(c_enc, q_enc,
                        c_mask, q_mask)    # (batch_size, c_len, 8 * final_hidden_size)
@@ -104,3 +165,4 @@ class BiDAF(nn.Module):
         out = self.out(att, mod, c_mask)  # 2 tensors, each (batch_size, c_len)
 
         return out
+
