@@ -97,6 +97,7 @@ def get_train_args():
 
     add_common_args(parser)
     add_train_test_args(parser)
+    add_feature_filepath_args(parser)
 
     parser.add_argument('--eval_steps',
                         type=int,
@@ -164,6 +165,7 @@ def get_test_args():
 
     add_common_args(parser)
     add_train_test_args(parser)
+    add_feature_filepath_args(parser)
 
     # Change dev -> val for GradeScope
     parser.add_argument('--split',
@@ -186,6 +188,87 @@ def get_test_args():
         raise ValueError(f'Unrecognized RNN type: "{args.rnn_type}" - pick "LSTM" or "GRU"')
 
     return args
+
+def get_add_feat_args():
+    """Get args used by setup_meta_feat.py"""
+    parser = argparse.ArgumentParser('Pre-process additional features files')
+
+    get_setup_args(parser)
+    add_feature_filepath_args(parser)
+
+    parser.add_argument('--ner2idx_file',
+                        type=str,
+                        default='./data/ner2idx.json')
+    parser.add_argument('--pos2idx_file',
+                        type=str,
+                        default='./data/pos2idx.json')
+
+    args = parser.parse_args()
+
+    return args
+
+def add_feature_filepath_args(parser):
+    """List of filenames for datasets with added features"""
+    # 1) Data files with tokens for context only
+    # - spacy files
+    parser.add_argument('--train_w_add_file',
+                        type=str,
+                        default='./data/train_w_spacy.json')
+    parser.add_argument('--dev_w_add_file',
+                        type=str,
+                        default='./data/dev_w_spacy.json')
+    parser.add_argument('--test_w_add_file',
+                        type=str,
+                        default='./data/test_w_spacy.json')
+    # - .npz record files
+    parser.add_argument('--train_w_add_record_file',
+                        type=str,
+                        default='./data/train_w_add_rec.npz')
+    parser.add_argument('--dev_w_add_record_file',
+                        type=str,
+                        default='./data/dev_w_add_rec.npz')
+    parser.add_argument('--test_w_add_record_file',
+                        type=str,
+                        default='./data/test_w_add_rec.npz')
+    # - .json evaluation files
+    parser.add_argument('--train_w_add_eval_file',
+                        type=str,
+                        default='./data/train_w_add_eval.json')
+    parser.add_argument('--dev_w_add_eval_file',
+                        type=str,
+                        default='./data/dev_w_add_eval.json')
+    parser.add_argument('--test_w_add_eval_file',
+                        type=str,
+                        default='./data/test_w_add_eval.json')
+    # - Meta files for construction
+    parser.add_argument('--dev_w_add_meta_file',
+                        type=str,
+                        default='./data/dev_w_add_meta.json')
+    parser.add_argument('--test_w_add_meta_file',
+                        type=str,
+                        default='./data/test_w_add_meta.json')
+
+    # 2) Data files with tokens for context and questions
+    # - .npz record files
+    parser.add_argument('--train_qtok_record_file',
+                        type=str,
+                        default='./data/train_qtok_rec.npz')
+    parser.add_argument('--dev_qtok_record_file',
+                        type=str,
+                        default='./data/dev_qtok_rec.npz')
+    parser.add_argument('--test_qtok_record_file',
+                        type=str,
+                        default='./data/test_qtok_rec.npz')
+    # - .json evaluation files
+    parser.add_argument('--train_qtok_eval_file',
+                        type=str,
+                        default='./data/train_qtok_eval.json')
+    parser.add_argument('--dev_qtok_eval_file',
+                        type=str,
+                        default='./data/dev_qtok_eval.json')
+    parser.add_argument('--test_qtok_eval_file',
+                        type=str,
+                        default='./data/test_qtok_eval.json')
 
 
 def add_common_args(parser):
@@ -214,6 +297,11 @@ def add_common_args(parser):
     parser.add_argument('--test_eval_file',
                         type=str,
                         default='./data/test_eval.json')
+    # New argument: whether or not to use default files
+    parser.add_argument('--use_default_task_files',
+                        type=bool,
+                        default=True,
+                        help="Flag to automatically switch over to the correct files based on input.")
 
 
 def add_train_test_args(parser):
@@ -256,7 +344,8 @@ def add_train_test_args(parser):
                         type=str,
                         default=None,
                         help='Path to load as a model checkpoint.')
-    # New parser arguments
+    # -- New parser arguments --
+    # 1) Hyperparameters
     # - RNN type: (LSTM, GRU)
     parser.add_argument('--rnn_type',
                         type=str,
@@ -268,22 +357,33 @@ def add_train_test_args(parser):
                         type=int,
                         default=2,
                         help='Number of RNN layers in encoder "mod" modeling layer.')
+    # 2) Character embeddings
     # - Flag to use character embeddings
     parser.add_argument('--use_char_embeddings',
                         type=bool,
                         default=False,
                         help='Flag to use character embeddings in the BiDAF model.')
-
-    # - Flag for use of exact match features
-    parser.add_argument('--use_exact',
-                        type=lambda s: s.lower() in ('yes', 'y', 'true', 't', '1'),
-                        default=False,
-                        help='Whether to add exact match features (context and ques)')
-    # - Flag for use of token features (POS, NER)
-    parser.add_argument('--use_token',
-                        type=lambda s: s.lower() in ('yes', 'y', 'true', 't', '1'),
-                        default=False,
-                        help='Whether to add token features (context and ques)')
+    # 3) Token features
+    # - Flags for use of exact match features
+    em_group = parser.add_mutually_exclusive_group()
+    em_group.add_argument('--use_exact',
+                          type=lambda s: s.lower() in ('yes', 'y', 'true', 't', '1'),
+                          default=False,
+                          help='Whether to add exact match features to both context and question.')
+    em_group.add_argument('--use_exact_context_only',
+                          type=bool,
+                          default=False,
+                          help='Whether to add exact match features to context only.')
+    # - Flags for use of token features (POS, NER)
+    token_group = parser.add_mutually_exclusive_group()
+    token_group.add_argument('--use_token',
+                             type=lambda s: s.lower() in ('yes', 'y', 'true', 't', '1'),
+                             default=False,
+                             help='Whether to add token features to both context and question.')
+    token_group.add_argument('--use_token_context_only',
+                             type=bool,
+                             default=False,
+                             help='Whether to add token features to context only.')
     # - Flag for size of embedding for NER and POS
     parser.add_argument('--token_embed_size',
                         type=int,
@@ -294,58 +394,3 @@ def add_train_test_args(parser):
                         type=lambda s: s.lower() in ('yes', 'y', 'true', 't', '1'),
                         default=False,
                         help='Whether to use projection when adding features')
-
-
-def get_add_feat_args():
-    """Get args used by setup_meta_feat.py"""
-    parser = argparse.ArgumentParser('Pre-process additional features files')
-
-    get_setup_args(parser)
-
-    parser.add_argument('--train_w_add_file',
-                        type=str,
-                        default='./data/train_w_spacy.json')
-    parser.add_argument('--dev_w_add_file',
-                        type=str,
-                        default='./data/dev_w_spacy.json')
-    parser.add_argument('--test_w_add_file',
-                        type=str,
-                        default='./data/test_w_spacy.json')
-
-    parser.add_argument('--train_w_add_rec_file',
-                        type=str,
-                        default='./data/train_w_add_rec.npz')
-    parser.add_argument('--dev_w_add_rec_file',
-                        type=str,
-                        default='./data/dev_w_add_rec.npz')
-    parser.add_argument('--test_w_add_rec_file',
-                        type=str,
-                        default='./data/test_w_add_rec.npz')
-
-    parser.add_argument('--train_w_add_eval_file',
-                        type=str,
-                        default='./data/train_w_add_eval.json')
-    parser.add_argument('--dev_w_add_eval_file',
-                        type=str,
-                        default='./data/dev_w_add_eval.json')
-    parser.add_argument('--test_w_add_eval_file',
-                        type=str,
-                        default='./data/test_w_add_eval.json')
-
-    parser.add_argument('--dev_w_add_meta_file',
-                        type=str,
-                        default='./data/dev_w_add_meta.json')
-    parser.add_argument('--test_w_add_meta_file',
-                        type=str,
-                        default='./data/test_w_add_meta.json')
-
-    parser.add_argument('--ner2idx_file',
-                        type=str,
-                        default='./data/ner2idx.json')
-    parser.add_argument('--pos2idx_file',
-                        type=str,
-                        default='./data/pos2idx.json')
-
-    args = parser.parse_args()
-
-    return args
