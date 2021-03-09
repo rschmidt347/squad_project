@@ -54,7 +54,8 @@ def main(args):
                   num_mod_layers=args.num_mod_layers,
                   use_token=args.use_token,
                   use_exact=args.use_exact,
-                  token_embed_size=args.token_embed_size)
+                  token_embed_size=args.token_embed_size,
+                  use_projection=args.use_projection)
 
     model = nn.DataParallel(model, gpu_ids)
     log.info(f'Loading checkpoint from {args.load_path}...')
@@ -87,25 +88,34 @@ def main(args):
 
             cw_idxs, cc_idxs, qw_idxs, qc_idxs, y1, y2, ids = example[:7]
 
-            ner_idxs, pos_idxs = None, None
+            ner_idxs, pos_idxs, qner_idxs, qpos_idxs = None, None, None, None
             exact_orig, exact_uncased, exact_lemma = None, None, None
+            qexact_orig, qexact_uncased, qexact_lemma = None, None, None
             if args.use_token:
-                ner_idxs, pos_idxs = example[7:9]
+                ner_idxs, pos_idxs, qner_idxs, qpos_idxs = example[7:11]
                 ner_idxs = ner_idxs.to(device)
                 pos_idxs = pos_idxs.to(device)
+                qner_idxs = qner_idxs.to(device)
+                qpos_idxs = qpos_idxs.to(device)
                 if args.use_exact:
                     # Token features present, so splice example at later index
-                    exact_orig, exact_uncased, exact_lemma = example[9:]
+                    exact_orig, exact_uncased, exact_lemma, qexact_orig, qexact_uncased, qexact_lemma = example[11:]
                     exact_orig = exact_orig.to(device)
                     exact_uncased = exact_uncased.to(device)
                     exact_lemma = exact_lemma.to(device)
+                    qexact_orig = qexact_orig.to(device)
+                    qexact_uncased = qexact_uncased.to(device)
+                    qexact_lemma = qexact_lemma.to(device)
             else:
                 if args.use_exact:
-                    # Token features present, so splice example at earlier index
-                    exact_orig, exact_uncased, exact_lemma = example[7:]
+                    # Token features not present, so splice example at earlier index
+                    exact_orig, exact_uncased, exact_lemma, qexact_orig, qexact_uncased, qexact_lemma = example[7:]
                     exact_orig = exact_orig.to(device)
                     exact_uncased = exact_uncased.to(device)
                     exact_lemma = exact_lemma.to(device)
+                    qexact_orig = qexact_orig.to(device)
+                    qexact_uncased = qexact_uncased.to(device)
+                    qexact_lemma = qexact_lemma.to(device)
 
             # Setup for forward
             cw_idxs = cw_idxs.to(device)
@@ -119,11 +129,15 @@ def main(args):
             if args.use_char_embeddings:
                 log_p1, log_p2 = model(cw_idxs, qw_idxs, cc_idxs, qc_idxs,
                                        ner_idxs=ner_idxs, pos_idxs=pos_idxs,
-                                       exact_orig=exact_orig, exact_uncased=exact_uncased, exact_lemma=exact_lemma)
+                                       exact_orig=exact_orig, exact_uncased=exact_uncased, exact_lemma=exact_lemma,
+                                       qner_idxs=qner_idxs, qpos_idxs=qpos_idxs,
+                                       qexact_orig=qexact_orig, qexact_uncased=qexact_uncased, qexact_lemma=qexact_lemma)
             else:
                 log_p1, log_p2 = model(cw_idxs, qw_idxs,
                                        ner_idxs=ner_idxs, pos_idxs=pos_idxs,
-                                       exact_orig=exact_orig, exact_uncased=exact_uncased, exact_lemma=exact_lemma)
+                                       exact_orig=exact_orig, exact_uncased=exact_uncased, exact_lemma=exact_lemma,
+                                       qner_idxs=qner_idxs, qpos_idxs=qpos_idxs,
+                                       qexact_orig=qexact_orig, qexact_uncased=qexact_uncased, qexact_lemma=qexact_lemma)
             y1, y2 = y1.to(device), y2.to(device)
             loss = F.nll_loss(log_p1, y1) + F.nll_loss(log_p2, y2)
             nll_meter.update(loss.item(), batch_size)

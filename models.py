@@ -40,7 +40,7 @@ class BiDAF(nn.Module):
     """
     def __init__(self, word_vectors, hidden_size,
                  drop_prob=0., rnn_type='LSTM', num_mod_layers=2, char_vectors=None,
-                 use_token=False, token_embed_size=0, use_exact=False):
+                 use_token=False, use_exact=False, token_embed_size=0, use_projection=False):
         super(BiDAF, self).__init__()
         # Use character embeddings if fed into the BiDAF model
         self.use_char_embeddings = True if char_vectors is not None else False
@@ -60,36 +60,36 @@ class BiDAF(nn.Module):
             final_hidden_size += hidden_size  # since char_out_size = hidden_size
 
         # Now, account for tagged features
-        final_context_hidden_size = final_hidden_size
-        # If using NER and POS, feed through embedding
+        final_doc_hidden_size = final_hidden_size
+        # If using NER and POS, feed through embedding or append index
         self.use_token = use_token
         if self.use_token:
-            # If x_emb -> [x_emb, x_pos, x_ner]; each word gets associated pos & ner
+            # If x_emb -> [x_emb, x_pos, x_ner]; each word gets associated pos & ner (for both context and ques)
             if token_embed_size > 0:
                 # Embed tokens:
                 self.enc_ner = layers.TokenEncoder(num_tags=NUM_NER_TAGS, embed_size=token_embed_size,
                                                    drop_prob=drop_prob, use_embed=True)
                 self.enc_pos = layers.TokenEncoder(num_tags=NUM_POS_TAGS, embed_size=token_embed_size,
                                                    drop_prob=drop_prob, use_embed=True)
-                final_context_hidden_size += 2 * token_embed_size
+                final_doc_hidden_size += 4 * token_embed_size
             else:
-                # One-hot-encode tokens:
-                #self.enc_ner = layers.TokenEncoder(num_tags=NUM_NER_TAGS)
-                #self.enc_pos = layers.TokenEncoder(num_tags=NUM_POS_TAGS)
-                #final_context_hidden_size += NUM_NER_TAGS + NUM_POS_TAGS
-                final_context_hidden_size += 2
+                # No embedding, simply append the index for ner, pos, qner, qpos
+                final_doc_hidden_size += 4
         # If using exact features
         self.use_exact = use_exact
         if self.use_exact:
-            # 3 new features: exact_orig, exact_uncased, exact_lemma
-            final_context_hidden_size += 3
+            # 6 new features: exact_orig, exact_uncased, exact_lemma, qexact_orig, qexact_uncased, qexact_lemma
+            final_doc_hidden_size += 6
 
         # Projection layer to decrease dimensions if extra features used
-        self.project = nn.Linear(final_context_hidden_size, final_hidden_size, bias=False)
+        self.use_projection = use_projection
+        if self.use_projection:
+            self.project = nn.Linear(final_doc_hidden_size, final_hidden_size, bias=False)
+        else:
+            final_hidden_size = final_doc_hidden_size
 
         # Highway Layer now outside of the Embedding layer...
         # - Allows concatenated word+char vector to be fed into Highway Layer if needed
-
         self.hwy = layers.HighwayEncoder(num_layers=2,
                                          hidden_size=final_hidden_size)
 
@@ -112,8 +112,9 @@ class BiDAF(nn.Module):
                                       drop_prob=drop_prob,
                                       rnn_type=rnn_type)
 
-    def forward(self, cw_idxs, qw_idxs, cc_idxs=None, qc_idxs=None, ner_idxs=None, pos_idxs=None,
-                exact_orig=None, exact_uncased=None, exact_lemma=None):
+    def forward(self, cw_idxs, qw_idxs, cc_idxs=None, qc_idxs=None,
+                ner_idxs=None, pos_idxs=None, exact_orig=None, exact_uncased=None, exact_lemma=None,
+                qner_idxs=None, qpos_idxs=None, qexact_orig=None, qexact_uncased=None, qexact_lemma=None):
         c_mask = torch.zeros_like(cw_idxs) != cw_idxs
         q_mask = torch.zeros_like(qw_idxs) != qw_idxs
         c_len, q_len = c_mask.sum(-1), q_mask.sum(-1)
@@ -128,14 +129,16 @@ class BiDAF(nn.Module):
             q_emb = torch.cat([q_emb, qc_emb], dim=2)  # (batch_size, q_len, final_hidden_size = 2 * hidden_size)
 
         if self.use_token:
-            #ner_emb = self.enc_ner(ner_idxs).float()  # (batch_size, c_len, {token_embed_size OR NUM_NER_TAGS})
-            #pos_emb = self.enc_pos(pos_idxs).float()  # (batch_size, c_len, {token_embed_size OR NUM_POS_TAGS})
-
             # Append index straight up - no one-hot
             ner_idxs = torch.unsqueeze(ner_idxs, dim=2).float()
             pos_idxs = torch.unsqueeze(pos_idxs, dim=2).float()
             c_emb = torch.cat([c_emb, ner_idxs, pos_idxs], dim=2)
             # -> (batch_size, c_len, final_context_hidden_size += {2 * token_embed_size OR (NUM_NER_TAGS+NUM_POS_TAGS)})
+
+            qner_idxs = torch.unsqueeze(qner_idxs, dim=2).float()
+            qpos_idxs = torch.unsqueeze(qpos_idxs, dim=2).float()
+            q_emb = torch.cat([q_emb, qner_idxs, qpos_idxs], dim=2)
+            # -> (batch_size, q_len, final_question_hidden_size += {2*token_embed_size OR (NUM_NER_TAGS+NUM_POS_TAGS)})
 
         if self.use_exact:
             # exact_{orig, uncased, lemma} all have dimensions: (batch_size, c_len)
@@ -146,9 +149,18 @@ class BiDAF(nn.Module):
             c_emb = torch.cat([c_emb, exact_orig, exact_uncased, exact_lemma], dim=2)
             # -> (batch_size, c_len, final_context_hidden_size += 3)
 
+            qexact_orig = torch.unsqueeze(qexact_orig, dim=2).float()
+            qexact_uncased = torch.unsqueeze(qexact_uncased, dim=2).float()
+            qexact_lemma = torch.unsqueeze(qexact_lemma, dim=2).float()
+            # -> (batch_size, q_len, 1)
+            q_emb = torch.cat([q_emb, qexact_orig, qexact_uncased, qexact_lemma], dim=2)
+            # -> (batch_size, q_len, final_question_hidden_size += 3)
+
         # Project context word embeddings from final_context_hidden_size -> final_hidden_size
-        if self.use_exact or self.use_token:
-            c_emb = self.project(c_emb)  # (batch_size, c_len, final_hidden_size)
+        # Project question word embeddings from question_context_hidden_size -> final_hidden_size
+        if self.use_projection:
+            c_emb = self.projection(c_emb)  # (batch_size, c_len, final_hidden_size)
+            q_emb = self.projection(q_emb)  # (batch_size, q_len, final_hidden_size)
 
         c_emb = self.hwy(c_emb)  # (batch_size, c_len, final_hidden_size)
         q_emb = self.hwy(q_emb)  # (batch_size, q_len, final_hidden_size)

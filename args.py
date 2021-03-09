@@ -278,17 +278,22 @@ def add_train_test_args(parser):
     parser.add_argument('--use_exact',
                         type=lambda s: s.lower() in ('yes', 'y', 'true', 't', '1'),
                         default=False,
-                        help='Whether to add exact match features')
+                        help='Whether to add exact match features (context and ques)')
     # - Flag for use of token features (POS, NER)
     parser.add_argument('--use_token',
                         type=lambda s: s.lower() in ('yes', 'y', 'true', 't', '1'),
                         default=False,
-                        help='Whether to token features')
+                        help='Whether to add token features (context and ques)')
     # - Flag for size of embedding for NER and POS
     parser.add_argument('--token_embed_size',
                         type=int,
                         default=0,
                         help='Size of embedding for NER and POS.')
+    # - Flag for use of projection of embedding with added features
+    parser.add_argument('--use_projection',
+                        type=lambda s: s.lower() in ('yes', 'y', 'true', 't', '1'),
+                        default=False,
+                        help='Whether to use projection when adding features')
 
 
 def get_add_feat_args():
