@@ -36,7 +36,7 @@ def fix_quotes(tokens_list):
     return tokens_list
 
 
-def tokenize_context(doc_list, lemma_list, ner_list, pos_list):
+def tokenize_doc(doc_list, lemma_list, ner_list, pos_list):
     doc_list = fix_quotes(doc_list)
     lemma_list = fix_quotes(lemma_list)
 
@@ -77,10 +77,10 @@ def process_file_w_add(filename, data_type, word_counter, char_counter):
             for para in article["paragraphs"]:
                 context = para["context"].replace("''", '" ').replace("``", '" ').replace("' '", '" ')
 
-                context_tokens, lemma, ner, pos = tokenize_context(para["context_tokens"],
-                                                                   para["lemma"],
-                                                                   para["ner"],
-                                                                   para["pos"])
+                context_tokens, lemma, ner, pos = tokenize_doc(para["context_tokens"],
+                                                               para["lemma"],
+                                                               para["ner"],
+                                                               para["pos"])
 
                 context_chars = [list(token) for token in context_tokens]
                 spans = convert_idx(context, context_tokens)
@@ -91,12 +91,12 @@ def process_file_w_add(filename, data_type, word_counter, char_counter):
 
                 for qa in para["qas"]:
                     total += 1
-                    ques = qa["question"].replace("''", '" ').replace("``", '" ')
+                    ques = qa["question"].replace("''", '" ').replace("``", '" ').replace("' '", '" ')
 
-                    ques_tokens, qlemma, qner, qpos = tokenize_context(qa["ques_tokens"],
-                                                                       qa["qlemma"],
-                                                                       qa["qner"],
-                                                                       qa["qpos"])
+                    ques_tokens, qlemma, qner, qpos = tokenize_doc(qa["ques_tokens"],
+                                                                   qa["qlemma"],
+                                                                   qa["qner"],
+                                                                   qa["qpos"])
 
                     ques_chars = [list(token) for token in ques_tokens]
                     for token in ques_tokens:
