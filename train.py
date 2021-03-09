@@ -82,6 +82,18 @@ def main(args):
                                weight_decay=args.l2_wd)
     scheduler = sched.LambdaLR(optimizer, lambda s: 1.)  # Constant LR
 
+    # Switch over to proper data files if none specified
+    if args.use_default_task_files:
+        if args.use_token or args.use_exact:
+            # Use added feature record files instead
+            log.info('Using default files based on provided feature input...')
+            log.info('To manually specify files, set --use_default_task_files to False.')
+            for data_split in ['train', 'dev', 'test']:
+                # .npz record files
+                vars(args)[f'{data_split}_record_file'] = vars(args)[f'{data_split}' + '_w_add_record_file']
+                # .json eval files
+                vars(args)[f'{data_split}_eval_file'] = vars(args)[f'{data_split}' + '_w_add_eval_file']
+
     # Get data loader
     log.info('Building dataset...')
     train_dataset = SQuAD(args.train_record_file, args.use_squad_v2,
