@@ -85,27 +85,38 @@ def main(args):
 
     # Switch over to proper data files if none specified
     if args.use_default_task_files:
-        if args.use_token or args.use_exact:
-            # Use added feature record files instead
-            log.info('Using default files based on provided feature input...')
+        if args.use_token == "c" or args.use_exact == "c":
+            # Use added feature files for context only
+            log.info('Using context-only feature files based on provided input...')
             log.info('To manually specify files, set --use_default_task_files to False.')
             for data_split in ['train', 'dev', 'test']:
                 # .npz record files
                 vars(args)[f'{data_split}_record_file'] = vars(args)[f'{data_split}' + '_w_add_record_file']
                 # .json eval files
                 vars(args)[f'{data_split}_eval_file'] = vars(args)[f'{data_split}' + '_w_add_eval_file']
+        elif args.use_token == "cq" or args.use_exact == "cq":
+            # Use added feature files for context and question
+            log.info('Using context & question feature files based on provided input...')
+            log.info('To manually specify files, set --use_default_task_files to False.')
+            for data_split in ['train', 'dev', 'test']:
+                # .npz record files
+                vars(args)[f'{data_split}_record_file'] = vars(args)[f'{data_split}' + '_qtok_record_file']
+                # .json eval files
+                vars(args)[f'{data_split}_eval_file'] = vars(args)[f'{data_split}' + '_qtok_eval_file']
 
     # Get data loader
     log.info('Building dataset...')
     train_dataset = SQuAD(args.train_record_file, args.use_squad_v2,
-                          use_token=args.use_token, use_exact=args.use_exact)
+                          use_token=True if args.use_token in ('c', 'cq') else False,
+                          use_exact=True if args.use_exact in ('c', 'cq') else False)
     train_loader = data.DataLoader(train_dataset,
                                    batch_size=args.batch_size,
                                    shuffle=True,
                                    num_workers=args.num_workers,
                                    collate_fn=collate_fn)
     dev_dataset = SQuAD(args.dev_record_file, args.use_squad_v2,
-                        use_token=args.use_token, use_exact=args.use_exact)
+                        use_token=True if args.use_token in ('c', 'cq') else False,
+                        use_exact=True if args.use_exact in ('c', 'cq') else False)
     dev_loader = data.DataLoader(dev_dataset,
                                  batch_size=args.batch_size,
                                  shuffle=False,
@@ -128,31 +139,34 @@ def main(args):
                 ner_idxs, pos_idxs, qner_idxs, qpos_idxs = None, None, None, None
                 exact_orig, exact_uncased, exact_lemma = None, None, None
                 qexact_orig, qexact_uncased, qexact_lemma = None, None, None
-                if args.use_token:
+                if args.use_token in ('c', 'cq'):
                     ner_idxs, pos_idxs, qner_idxs, qpos_idxs = example[7:11]
                     ner_idxs = ner_idxs.to(device)
                     pos_idxs = pos_idxs.to(device)
-                    qner_idxs = qner_idxs.to(device)
-                    qpos_idxs = qpos_idxs.to(device)
-                    if args.use_exact:
+                    if args.use_token == 'cq':
+                        qner_idxs = qner_idxs.to(device)
+                        qpos_idxs = qpos_idxs.to(device)
+                    if args.use_exact in ('c', 'cq'):
                         # Token features present, so splice example at later index
                         exact_orig, exact_uncased, exact_lemma, qexact_orig, qexact_uncased, qexact_lemma = example[11:]
                         exact_orig = exact_orig.to(device)
                         exact_uncased = exact_uncased.to(device)
                         exact_lemma = exact_lemma.to(device)
-                        qexact_orig = qexact_orig.to(device)
-                        qexact_uncased = qexact_uncased.to(device)
-                        qexact_lemma = qexact_lemma.to(device)
+                        if args.use_exact == 'cq':
+                            qexact_orig = qexact_orig.to(device)
+                            qexact_uncased = qexact_uncased.to(device)
+                            qexact_lemma = qexact_lemma.to(device)
                 else:
-                    if args.use_exact:
+                    if args.use_exact in ('c', 'cq'):
                         # Token features not present, so splice example at earlier index
                         exact_orig, exact_uncased, exact_lemma, qexact_orig, qexact_uncased, qexact_lemma = example[7:]
                         exact_orig = exact_orig.to(device)
                         exact_uncased = exact_uncased.to(device)
                         exact_lemma = exact_lemma.to(device)
-                        qexact_orig = qexact_orig.to(device)
-                        qexact_uncased = qexact_uncased.to(device)
-                        qexact_lemma = qexact_lemma.to(device)
+                        if args.use_exact == 'cq':
+                            qexact_orig = qexact_orig.to(device)
+                            qexact_uncased = qexact_uncased.to(device)
+                            qexact_lemma = qexact_lemma.to(device)
 
                 # Setup for forward
                 cw_idxs = cw_idxs.to(device)
@@ -248,31 +262,34 @@ def evaluate(model, data_loader, device, eval_file, max_len, use_squad_v2, use_c
             ner_idxs, pos_idxs, qner_idxs, qpos_idxs = None, None, None, None
             exact_orig, exact_uncased, exact_lemma = None, None, None
             qexact_orig, qexact_uncased, qexact_lemma = None, None, None
-            if use_token:
+            if use_token in ('c', 'cq'):
                 ner_idxs, pos_idxs, qner_idxs, qpos_idxs = example[7:11]
                 ner_idxs = ner_idxs.to(device)
                 pos_idxs = pos_idxs.to(device)
-                qner_idxs = qner_idxs.to(device)
-                qpos_idxs = qpos_idxs.to(device)
-                if use_exact:
+                if use_token == 'cq':
+                    qner_idxs = qner_idxs.to(device)
+                    qpos_idxs = qpos_idxs.to(device)
+                if use_exact in ('c', 'cq'):
                     # Token features present, so splice example at later index
                     exact_orig, exact_uncased, exact_lemma, qexact_orig, qexact_uncased, qexact_lemma = example[11:]
                     exact_orig = exact_orig.to(device)
                     exact_uncased = exact_uncased.to(device)
                     exact_lemma = exact_lemma.to(device)
-                    qexact_orig = qexact_orig.to(device)
-                    qexact_uncased = qexact_uncased.to(device)
-                    qexact_lemma = qexact_lemma.to(device)
+                    if use_exact == 'cq':
+                        qexact_orig = qexact_orig.to(device)
+                        qexact_uncased = qexact_uncased.to(device)
+                        qexact_lemma = qexact_lemma.to(device)
             else:
-                if use_exact:
+                if use_exact in ('c', 'cq'):
                     # Token features not present, so splice example at earlier index
                     exact_orig, exact_uncased, exact_lemma, qexact_orig, qexact_uncased, qexact_lemma = example[7:]
                     exact_orig = exact_orig.to(device)
                     exact_uncased = exact_uncased.to(device)
                     exact_lemma = exact_lemma.to(device)
-                    qexact_orig = qexact_orig.to(device)
-                    qexact_uncased = qexact_uncased.to(device)
-                    qexact_lemma = qexact_lemma.to(device)
+                    if use_exact == 'cq':
+                        qexact_orig = qexact_orig.to(device)
+                        qexact_uncased = qexact_uncased.to(device)
+                        qexact_lemma = qexact_lemma.to(device)
 
             # Setup for forward
             cw_idxs = cw_idxs.to(device)

@@ -156,6 +156,12 @@ def get_train_args():
     if args.rnn_type not in ('LSTM', 'GRU'):
         raise ValueError(f'Unrecognized RNN type: "{args.rnn_type}" - pick "LSTM" or "GRU"')
 
+    # Error handling for added features at train time
+    if args.use_token not in ('none', 'c', 'cq'):
+        raise ValueError(f'Unrecognized option for token use: "{args.use_token}" - pick "none", "c", or "cq"')
+    if args.use_exact not in ('none', 'c', 'cq'):
+        raise ValueError(f'Unrecognized option for EM use: "{args.use_exact}" - pick "none", "c", or "cq"')
+
     return args
 
 
@@ -186,6 +192,12 @@ def get_test_args():
     # Error handling for new arguments at test time
     if args.rnn_type not in ('LSTM', 'GRU'):
         raise ValueError(f'Unrecognized RNN type: "{args.rnn_type}" - pick "LSTM" or "GRU"')
+
+    # Error handling for added features at train time
+    if args.use_token not in ('none', 'c', 'cq'):
+        raise ValueError(f'Unrecognized option for token use: "{args.use_token}" - pick "none", "c", or "cq"')
+    if args.use_exact not in ('none', 'c', 'cq'):
+        raise ValueError(f'Unrecognized option for EM use: "{args.use_exact}" - pick "none", "c", or "cq"')
 
     return args
 
@@ -364,26 +376,18 @@ def add_train_test_args(parser):
                         default=False,
                         help='Flag to use character embeddings in the BiDAF model.')
     # 3) Token features
-    # - Flags for use of exact match features
-    em_group = parser.add_mutually_exclusive_group()
-    em_group.add_argument('--use_exact',
-                          type=lambda s: s.lower() in ('yes', 'y', 'true', 't', '1'),
-                          default=False,
-                          help='Whether to add exact match features to both context and question.')
-    em_group.add_argument('--use_exact_context_only',
-                          type=bool,
-                          default=False,
-                          help='Whether to add exact match features to context only.')
-    # - Flags for use of token features (POS, NER)
-    token_group = parser.add_mutually_exclusive_group()
-    token_group.add_argument('--use_token',
-                             type=lambda s: s.lower() in ('yes', 'y', 'true', 't', '1'),
-                             default=False,
-                             help='Whether to add token features to both context and question.')
-    token_group.add_argument('--use_token_context_only',
-                             type=bool,
-                             default=False,
-                             help='Whether to add token features to context only.')
+    # - Options for use of exact match features
+    parser.add_argument('--use_exact',
+                        type=str,
+                        default='False',
+                        choices=('False', 'c', 'q'),
+                        help='Whether to add exact match features. Can specify context only or context & question.')
+    # - Options for use of token features (POS, NER)
+    parser.add_argument('--use_token',
+                        type=str,
+                        default='False',
+                        choices=('False', 'c', 'q'),
+                        help='Whether to add token features (POS, NER). Can specify context only or context & question.')
     # - Flag for size of embedding for NER and POS
     parser.add_argument('--token_embed_size',
                         type=int,

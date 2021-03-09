@@ -61,9 +61,10 @@ class BiDAF(nn.Module):
         # 3) Now, account for tagged features if needed
         # - Keep track of new hidden size if adding tagged features
         final_doc_hidden_size = final_hidden_size
+        final_context_hidden_size = final_hidden_size
         self.use_token = use_token
         # 3 a) Token features: POS, NER
-        if self.use_token:
+        if self.use_token in ('c', 'cq'):
             if token_embed_size > 0:
                 # If embedding size specified, embed the tokens
                 self.enc_ner = layers.TokenEncoder(num_tags=num_ner_tags, embed_size=token_embed_size,
@@ -72,12 +73,11 @@ class BiDAF(nn.Module):
                                                    drop_prob=drop_prob, use_embed=True)
                 final_doc_hidden_size += 2 * token_embed_size
             else:
-
                 # No embedding, simply append the index for ner, pos, (resp. qner, qpos)
                 final_doc_hidden_size += 2
         # 3 b) Exact match features: original match, uncased match, lemma match
         self.use_exact = use_exact
-        if self.use_exact:
+        if self.use_exact in ('c', 'cq'):
             # Concatenate 3 binary features to each vector
             final_doc_hidden_size += 3
 
@@ -123,42 +123,44 @@ class BiDAF(nn.Module):
         c_emb = self.emb(cw_idxs)  # (batch_size, c_len, hidden_size)
         q_emb = self.emb(qw_idxs)  # (batch_size, q_len, hidden_size)
 
-        if self.use_char_embeddings:
+        if self.use_char_embeddings in ('c', 'cq'):
             cc_emb = self.char_emb(cc_idxs)  # (batch_size, c_len, hidden_size)
-            qc_emb = self.char_emb(qc_idxs)  # (batch_size, q_len, hidden_size)
             c_emb = torch.cat([c_emb, cc_emb], dim=2)  # (batch_size, c_len, final_doc_hidden_size = 2*hidden_size)
-            q_emb = torch.cat([q_emb, qc_emb], dim=2)  # (batch_size, q_len, final_doc_hidden_size = 2*hidden_size)
+            if self.use_char_embeddings == 'cq':
+                qc_emb = self.char_emb(qc_idxs)  # (batch_size, q_len, hidden_size)
+                q_emb = torch.cat([q_emb, qc_emb], dim=2)  # (batch_size, q_len, final_doc_hidden_size = 2*hidden_size)
 
-        if self.use_token:
+        if self.use_token in ('c', 'cq'):
             # NER, POS indices: (batch_size, c_len)
             ner_idxs = torch.unsqueeze(ner_idxs, dim=2).float()  # -> (batch_size, c_len, 1)
             pos_idxs = torch.unsqueeze(pos_idxs, dim=2).float()  # -> (batch_size, c_len, 1)
             c_emb = torch.cat([c_emb, ner_idxs, pos_idxs], dim=2)
             # -> final output: (batch_size, c_len, final_doc_hidden_size += {2, 2 * token_embed_size})
+            if self.use_token == 'cq':
+                qner_idxs = torch.unsqueeze(qner_idxs, dim=2).float()  # -> (batch_size, q_len, 1)
+                qpos_idxs = torch.unsqueeze(qpos_idxs, dim=2).float()  # -> (batch_size, q_len, 1)
+                q_emb = torch.cat([q_emb, qner_idxs, qpos_idxs], dim=2)
+                # -> final output: (batch_size, q_len, final_doc_hidden_size += {2, 2 * token_embed_size})
 
-            qner_idxs = torch.unsqueeze(qner_idxs, dim=2).float()  # -> (batch_size, q_len, 1)
-            qpos_idxs = torch.unsqueeze(qpos_idxs, dim=2).float()  # -> (batch_size, q_len, 1)
-            q_emb = torch.cat([q_emb, qner_idxs, qpos_idxs], dim=2)
-            # -> final output: (batch_size, q_len, final_doc_hidden_size += {2, 2 * token_embed_size})
-
-        if self.use_exact:
+        if self.use_exact in ('c', 'cq'):
             # exact_{orig, uncased, lemma} all have dimensions: (batch_size, c_len)
             exact_orig = torch.unsqueeze(exact_orig, dim=2).float()  # -> (batch_size, c_len, 1)
             exact_uncased = torch.unsqueeze(exact_uncased, dim=2).float()  # -> (batch_size, c_len, 1)
             exact_lemma = torch.unsqueeze(exact_lemma, dim=2).float()  # -> (batch_size, c_len, 1)
             c_emb = torch.cat([c_emb, exact_orig, exact_uncased, exact_lemma], dim=2)
             # -> final output: (batch_size, c_len, final_doc_hidden_size += 3)
-
-            qexact_orig = torch.unsqueeze(qexact_orig, dim=2).float(). # -> (batch_size, q_len, 1)
-            qexact_uncased = torch.unsqueeze(qexact_uncased, dim=2).float()  # -> (batch_size, q_len, 1)
-            qexact_lemma = torch.unsqueeze(qexact_lemma, dim=2).float()  # -> (batch_size, q_len, 1)
-            q_emb = torch.cat([q_emb, qexact_orig, qexact_uncased, qexact_lemma], dim=2)
-            # -> final_output: (batch_size, q_len, final_doc_hidden_size += 3)
+            if self.use_exact == 'cq':
+                qexact_orig = torch.unsqueeze(qexact_orig, dim=2).float()  # -> (batch_size, q_len, 1)
+                qexact_uncased = torch.unsqueeze(qexact_uncased, dim=2).float()  # -> (batch_size, q_len, 1)
+                qexact_lemma = torch.unsqueeze(qexact_lemma, dim=2).float()  # -> (batch_size, q_len, 1)
+                q_emb = torch.cat([q_emb, qexact_orig, qexact_uncased, qexact_lemma], dim=2)
+                # -> final_output: (batch_size, q_len, final_doc_hidden_size += 3)
 
         # Project context/question embeddings from final_doc_hidden_size -> final_hidden_size
-        if self.use_projection and (self.use_exact or self.use_token):
+        if (self.use_exact in ('c', 'cq') or self.use_token in ('c', 'cq')) and self.use_projection:
             c_emb = self.projection(c_emb)  # (batch_size, c_len, final_hidden_size)
-            q_emb = self.projection(q_emb)  # (batch_size, q_len, final_hidden_size)
+            if self.use_exact == 'cq' or self.use_token == 'cq':
+                q_emb = self.projection(q_emb)  # (batch_size, q_len, final_hidden_size)
         # else: let final_hidden_size = final_doc_hidden_size
 
         c_emb = self.hwy(c_emb)  # (batch_size, c_len, final_hidden_size)
