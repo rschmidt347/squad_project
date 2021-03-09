@@ -94,6 +94,9 @@ def main(args):
                 vars(args)[f'{data_split}_record_file'] = vars(args)[f'{data_split}' + '_w_add_record_file']
                 # .json eval files
                 vars(args)[f'{data_split}_eval_file'] = vars(args)[f'{data_split}' + '_w_add_eval_file']
+            if not args.use_projection and args.token_embed_size == 0:
+                log.info('Turning on projection to ensure dimension agreement...')
+                vars(args)['use_projection'] = True
         elif args.use_token == "cq" or args.use_exact == "cq":
             # Use added feature files for context and question
             log.info('Using context & question feature files based on provided input...')
