@@ -10,8 +10,10 @@ import argparse
 def get_setup_args(parser=None):
 
     """Get arguments needed in setup.py."""
+    is_base_setup = False
     if parser is None:
         parser = argparse.ArgumentParser('Download and pre-process SQuAD')
+        is_base_setup = True
 
     add_common_args(parser)
 
@@ -83,9 +85,10 @@ def get_setup_args(parser=None):
                         default=True,
                         help='Process examples from the test set')
 
-    args = parser.parse_args()
+    if is_base_setup:
+        args = parser.parse_args()
 
-    return args
+        return args
 
 
 def get_train_args():
