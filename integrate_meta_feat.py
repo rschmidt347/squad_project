@@ -18,11 +18,11 @@ def get_feat_args():
 
     parser.add_argument('--proc_file',
                         type=str,
-                        default='./data/dev-v2.0-processed.txt')
+                        default='./data/dev-v2.0-qtok-spacy.txt')
 
     parser.add_argument('--out_file',
                         type=str,
-                        default='./data/dev_with_feat.json')
+                        default='./data/dev_qtok_spacy.json')
 
     args = parser.parse_args()
 
@@ -73,6 +73,8 @@ if __name__ == '__main__':
                         if cur_id == qa['id']:
                             qa['ques_tokens'] = row['question']
                             qa['qlemma'] = row['qlemma']
+                            qa['qner'] = row['qner']
+                            qa['qpos'] = row['qpos']
                             break
 
 

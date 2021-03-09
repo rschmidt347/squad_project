@@ -10,8 +10,10 @@ import argparse
 def get_setup_args(parser=None):
 
     """Get arguments needed in setup.py."""
+    is_base_setup = False
     if parser is None:
         parser = argparse.ArgumentParser('Download and pre-process SQuAD')
+        is_base_setup = True
 
     add_common_args(parser)
 
@@ -83,9 +85,10 @@ def get_setup_args(parser=None):
                         default=True,
                         help='Process examples from the test set')
 
-    args = parser.parse_args()
+    if is_base_setup:
+        args = parser.parse_args()
 
-    return args
+        return args
 
 
 def get_train_args():
@@ -246,7 +249,26 @@ def add_feature_filepath_args(parser):
                         default='./data/test_w_add_meta.json')
 
     # 2) Data files with tokens for context and questions
-    # TODO ...
+    # - .npz record files
+    parser.add_argument('--train_qtok_record_file',
+                        type=str,
+                        default='./data/train_qtok_rec.npz')
+    parser.add_argument('--dev_qtok_record_file',
+                        type=str,
+                        default='./data/dev_qtok_rec.npz')
+    parser.add_argument('--test_qtok_record_file',
+                        type=str,
+                        default='./data/test_qtok_rec.npz')
+    # - .json evaluation files
+    parser.add_argument('--train_qtok_eval_file',
+                        type=str,
+                        default='./data/train_qtok_eval.json')
+    parser.add_argument('--dev_qtok_eval_file',
+                        type=str,
+                        default='./data/dev_qtok_eval.json')
+    parser.add_argument('--test_qtok_eval_file',
+                        type=str,
+                        default='./data/test_qtok_eval.json')
 
 
 def add_common_args(parser):
@@ -342,18 +364,33 @@ def add_train_test_args(parser):
                         default=False,
                         help='Flag to use character embeddings in the BiDAF model.')
     # 3) Token features
-    # - Flag for use of exact match features
-    parser.add_argument('--use_exact',
-                        type=lambda s: s.lower() in ('yes', 'y', 'true', 't', '1'),
-                        default=False,
-                        help='Whether to add exact match features')
-    # - Flag for use of token features (POS, NER)
-    parser.add_argument('--use_token',
-                        type=lambda s: s.lower() in ('yes', 'y', 'true', 't', '1'),
-                        default=False,
-                        help='Whether to token features')
+    # - Flags for use of exact match features
+    em_group = parser.add_mutually_exclusive_group()
+    em_group.add_argument('--use_exact',
+                          type=lambda s: s.lower() in ('yes', 'y', 'true', 't', '1'),
+                          default=False,
+                          help='Whether to add exact match features to both context and question.')
+    em_group.add_argument('--use_exact_context_only',
+                          type=bool,
+                          default=False,
+                          help='Whether to add exact match features to context only.')
+    # - Flags for use of token features (POS, NER)
+    token_group = parser.add_mutually_exclusive_group()
+    token_group.add_argument('--use_token',
+                             type=lambda s: s.lower() in ('yes', 'y', 'true', 't', '1'),
+                             default=False,
+                             help='Whether to add token features to both context and question.')
+    token_group.add_argument('--use_token_context_only',
+                             type=bool,
+                             default=False,
+                             help='Whether to add token features to context only.')
     # - Flag for size of embedding for NER and POS
     parser.add_argument('--token_embed_size',
                         type=int,
                         default=0,
                         help='Size of embedding for NER and POS.')
+    # - Flag for use of projection of embedding with added features
+    parser.add_argument('--use_projection',
+                        type=lambda s: s.lower() in ('yes', 'y', 'true', 't', '1'),
+                        default=False,
+                        help='Whether to use projection when adding features')
