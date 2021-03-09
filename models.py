@@ -61,7 +61,6 @@ class BiDAF(nn.Module):
         # 3) Now, account for tagged features if needed
         # - Keep track of new hidden size if adding tagged features
         final_doc_hidden_size = final_hidden_size
-        final_context_hidden_size = final_hidden_size
         self.use_token = use_token
         # 3 a) Token features: POS, NER
         if self.use_token in ('c', 'cq'):
