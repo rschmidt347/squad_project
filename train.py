@@ -49,6 +49,10 @@ def main(args):
 
     # Get model
     log.info('Building model...')
+    # Take note of extra features
+    token_flag = True if args.use_token in ('c', 'cq') else False
+    exact_flag = True if args.use_token in ('c', 'cq') else False
+    context_and_question_flag = True if args.use_token == 'cq' else False
 
     model = BiDAF(word_vectors=word_vectors,
                   char_vectors=char_vectors if args.use_char_embeddings else None,
@@ -56,8 +60,9 @@ def main(args):
                   drop_prob=args.drop_prob,
                   rnn_type=args.rnn_type,
                   num_mod_layers=args.num_mod_layers,
-                  use_token=args.use_token,
-                  use_exact=args.use_exact,
+                  use_token=token_flag,
+                  use_exact=exact_flag,
+                  context_and_question=context_and_question_flag,
                   token_embed_size=args.token_embed_size,
                   use_projection=args.use_projection)
 
@@ -85,46 +90,28 @@ def main(args):
 
     # Switch over to proper data files if none specified
     if args.use_default_task_files:
-        if args.use_token == "c" or args.use_exact == "c":
-            # Use added feature files for context only
-            log.info('Using context-only feature files based on provided input...')
-            log.info('To manually specify files, set --use_default_task_files to False.')
-            for data_split in ['train', 'dev', 'test']:
-                # .npz record files
-                vars(args)[f'{data_split}_record_file'] = vars(args)[f'{data_split}' + '_w_add_record_file']
-                # .json eval files
-                vars(args)[f'{data_split}_eval_file'] = vars(args)[f'{data_split}' + '_w_add_eval_file']
-            if not args.use_projection and args.token_embed_size == 0:
-                log.info('Turning on projection to ensure dimension agreement...')
-                vars(args)['use_projection'] = True
-        elif args.use_token == "cq" or args.use_exact == "cq":
-            # Use added feature files for context and question
-            log.info('Using context & question feature files based on provided input...')
-            log.info('To manually specify files, set --use_default_task_files to False.')
-            for data_split in ['train', 'dev', 'test']:
-                # .npz record files
-                vars(args)[f'{data_split}_record_file'] = vars(args)[f'{data_split}' + '_qtok_record_file']
-                # .json eval files
-                vars(args)[f'{data_split}_eval_file'] = vars(args)[f'{data_split}' + '_qtok_eval_file']
+        args, log = switch_to_default_files(args, log)
 
     # Get data loader
     log.info('Building dataset...')
     train_dataset = SQuAD(args.train_record_file, args.use_squad_v2,
-                          use_token=True if args.use_token in ('c', 'cq') else False,
-                          use_exact=True if args.use_exact in ('c', 'cq') else False)
+                          use_token=token_flag,
+                          use_exact=exact_flag,
+                          context_and_question=context_and_question_flag)
     train_loader = data.DataLoader(train_dataset,
                                    batch_size=args.batch_size,
                                    shuffle=True,
                                    num_workers=args.num_workers,
-                                   collate_fn=collate_fn)
+                                   collate_fn=collate_fn(context_and_question=context_and_question_flag))
     dev_dataset = SQuAD(args.dev_record_file, args.use_squad_v2,
-                        use_token=True if args.use_token in ('c', 'cq') else False,
-                        use_exact=True if args.use_exact in ('c', 'cq') else False)
+                        use_token=token_flag,
+                        use_exact=exact_flag,
+                        context_and_question=context_and_question_flag)
     dev_loader = data.DataLoader(dev_dataset,
                                  batch_size=args.batch_size,
                                  shuffle=False,
                                  num_workers=args.num_workers,
-                                 collate_fn=collate_fn)
+                                 collate_fn=collate_fn(context_and_question=context_and_question_flag))
 
     # Train
     log.info('Training...')
@@ -142,34 +129,52 @@ def main(args):
                 ner_idxs, pos_idxs, qner_idxs, qpos_idxs = None, None, None, None
                 exact_orig, exact_uncased, exact_lemma = None, None, None
                 qexact_orig, qexact_uncased, qexact_lemma = None, None, None
-                if args.use_token in ('c', 'cq'):
-                    ner_idxs, pos_idxs, qner_idxs, qpos_idxs = example[7:11]
-                    ner_idxs = ner_idxs.to(device)
-                    pos_idxs = pos_idxs.to(device)
-                    if args.use_token == 'cq':
+                if context_and_question_flag:
+                    if token_flag:
+                        ner_idxs, pos_idxs, qner_idxs, qpos_idxs = example[7:11]
+                        ner_idxs = ner_idxs.to(device)
+                        pos_idxs = pos_idxs.to(device)
                         qner_idxs = qner_idxs.to(device)
                         qpos_idxs = qpos_idxs.to(device)
-                    if args.use_exact in ('c', 'cq'):
-                        # Token features present, so splice example at later index
-                        exact_orig, exact_uncased, exact_lemma, qexact_orig, qexact_uncased, qexact_lemma = example[11:]
-                        exact_orig = exact_orig.to(device)
-                        exact_uncased = exact_uncased.to(device)
-                        exact_lemma = exact_lemma.to(device)
-                        if args.use_exact == 'cq':
+                        if exact_flag:
+                            # Token features present, so splice example at later index
+                            exact_orig, exact_uncased, exact_lemma, qexact_orig, qexact_uncased, qexact_lemma = example[
+                                                                                                                11:]
+                            exact_orig = exact_orig.to(device)
+                            exact_uncased = exact_uncased.to(device)
+                            exact_lemma = exact_lemma.to(device)
+                            qexact_orig = qexact_orig.to(device)
+                            qexact_uncased = qexact_uncased.to(device)
+                            qexact_lemma = qexact_lemma.to(device)
+                    else:
+                        if exact_flag:
+                            # Token features not present, so splice example at earlier index
+                            exact_orig, exact_uncased, exact_lemma, qexact_orig, qexact_uncased, qexact_lemma = example[
+                                                                                                                7:]
+                            exact_orig = exact_orig.to(device)
+                            exact_uncased = exact_uncased.to(device)
+                            exact_lemma = exact_lemma.to(device)
                             qexact_orig = qexact_orig.to(device)
                             qexact_uncased = qexact_uncased.to(device)
                             qexact_lemma = qexact_lemma.to(device)
                 else:
-                    if args.use_exact in ('c', 'cq'):
-                        # Token features not present, so splice example at earlier index
-                        exact_orig, exact_uncased, exact_lemma, qexact_orig, qexact_uncased, qexact_lemma = example[7:]
-                        exact_orig = exact_orig.to(device)
-                        exact_uncased = exact_uncased.to(device)
-                        exact_lemma = exact_lemma.to(device)
-                        if args.use_exact == 'cq':
-                            qexact_orig = qexact_orig.to(device)
-                            qexact_uncased = qexact_uncased.to(device)
-                            qexact_lemma = qexact_lemma.to(device)
+                    if token_flag:
+                        ner_idxs, pos_idxs = example[7:9]
+                        ner_idxs = ner_idxs.to(device)
+                        pos_idxs = pos_idxs.to(device)
+                        if exact_flag:
+                            # Token features present, so splice example at later index
+                            exact_orig, exact_uncased, exact_lemma = example[9:]
+                            exact_orig = exact_orig.to(device)
+                            exact_uncased = exact_uncased.to(device)
+                            exact_lemma = exact_lemma.to(device)
+                    else:
+                        if exact_flag:
+                            # Token features present, so splice example at earlier index
+                            exact_orig, exact_uncased, exact_lemma = example[7:]
+                            exact_orig = exact_orig.to(device)
+                            exact_uncased = exact_uncased.to(device)
+                            exact_lemma = exact_lemma.to(device)
 
                 # Setup for forward
                 cw_idxs = cw_idxs.to(device)
@@ -227,8 +232,9 @@ def main(args):
                                                   args.max_ans_len,
                                                   args.use_squad_v2,
                                                   args.use_char_embeddings,
-                                                  args.use_token,
-                                                  args.use_exact)
+                                                  token_flag,
+                                                  exact_flag,
+                                                  context_and_question_flag)
                     saver.save(step, model, results[args.metric_name], device)
                     ema.resume(model)
 
@@ -249,7 +255,7 @@ def main(args):
 
 
 def evaluate(model, data_loader, device, eval_file, max_len, use_squad_v2, use_char_embeddings,
-             use_token=False, use_exact=False):
+             use_token=False, use_exact=False, context_and_question=False):
     nll_meter = util.AverageMeter()
 
     model.eval()
@@ -265,34 +271,50 @@ def evaluate(model, data_loader, device, eval_file, max_len, use_squad_v2, use_c
             ner_idxs, pos_idxs, qner_idxs, qpos_idxs = None, None, None, None
             exact_orig, exact_uncased, exact_lemma = None, None, None
             qexact_orig, qexact_uncased, qexact_lemma = None, None, None
-            if use_token in ('c', 'cq'):
-                ner_idxs, pos_idxs, qner_idxs, qpos_idxs = example[7:11]
-                ner_idxs = ner_idxs.to(device)
-                pos_idxs = pos_idxs.to(device)
-                if use_token == 'cq':
+            if context_and_question:
+                if use_token:
+                    ner_idxs, pos_idxs, qner_idxs, qpos_idxs = example[7:11]
+                    ner_idxs = ner_idxs.to(device)
+                    pos_idxs = pos_idxs.to(device)
                     qner_idxs = qner_idxs.to(device)
                     qpos_idxs = qpos_idxs.to(device)
-                if use_exact in ('c', 'cq'):
-                    # Token features present, so splice example at later index
-                    exact_orig, exact_uncased, exact_lemma, qexact_orig, qexact_uncased, qexact_lemma = example[11:]
-                    exact_orig = exact_orig.to(device)
-                    exact_uncased = exact_uncased.to(device)
-                    exact_lemma = exact_lemma.to(device)
-                    if use_exact == 'cq':
+                    if use_exact:
+                        # Token features present, so splice example at later index
+                        exact_orig, exact_uncased, exact_lemma, qexact_orig, qexact_uncased, qexact_lemma = example[11:]
+                        exact_orig = exact_orig.to(device)
+                        exact_uncased = exact_uncased.to(device)
+                        exact_lemma = exact_lemma.to(device)
+                        qexact_orig = qexact_orig.to(device)
+                        qexact_uncased = qexact_uncased.to(device)
+                        qexact_lemma = qexact_lemma.to(device)
+                else:
+                    if use_exact:
+                        # Token features not present, so splice example at earlier index
+                        exact_orig, exact_uncased, exact_lemma, qexact_orig, qexact_uncased, qexact_lemma = example[7:]
+                        exact_orig = exact_orig.to(device)
+                        exact_uncased = exact_uncased.to(device)
+                        exact_lemma = exact_lemma.to(device)
                         qexact_orig = qexact_orig.to(device)
                         qexact_uncased = qexact_uncased.to(device)
                         qexact_lemma = qexact_lemma.to(device)
             else:
-                if use_exact in ('c', 'cq'):
-                    # Token features not present, so splice example at earlier index
-                    exact_orig, exact_uncased, exact_lemma, qexact_orig, qexact_uncased, qexact_lemma = example[7:]
-                    exact_orig = exact_orig.to(device)
-                    exact_uncased = exact_uncased.to(device)
-                    exact_lemma = exact_lemma.to(device)
-                    if use_exact == 'cq':
-                        qexact_orig = qexact_orig.to(device)
-                        qexact_uncased = qexact_uncased.to(device)
-                        qexact_lemma = qexact_lemma.to(device)
+                if use_token:
+                    ner_idxs, pos_idxs = example[7:9]
+                    ner_idxs = ner_idxs.to(device)
+                    pos_idxs = pos_idxs.to(device)
+                    if use_exact:
+                        # Token features present, so splice example at later index
+                        exact_orig, exact_uncased, exact_lemma = example[9:]
+                        exact_orig = exact_orig.to(device)
+                        exact_uncased = exact_uncased.to(device)
+                        exact_lemma = exact_lemma.to(device)
+                else:
+                    if use_exact:
+                        # Token features present, so splice example at earlier index
+                        exact_orig, exact_uncased, exact_lemma = example[7:]
+                        exact_orig = exact_orig.to(device)
+                        exact_uncased = exact_uncased.to(device)
+                        exact_lemma = exact_lemma.to(device)
 
             # Setup for forward
             cw_idxs = cw_idxs.to(device)
@@ -346,6 +368,33 @@ def evaluate(model, data_loader, device, eval_file, max_len, use_squad_v2, use_c
     results = OrderedDict(results_list)
 
     return results, pred_dict
+
+
+def switch_to_default_files(args, log):
+    """Update args and log to switch to default files if none specified"""
+    if args.use_token == "c" or args.use_exact == "c":
+        # Use added feature files for context only
+        log.info('Using context-only feature files based on provided input...')
+        log.info('To manually specify files, set --use_default_task_files to False.')
+        for data_split in ['train', 'dev', 'test']:
+            # .npz record files
+            vars(args)[f'{data_split}_record_file'] = vars(args)[f'{data_split}' + '_w_add_record_file']
+            # .json eval files
+            vars(args)[f'{data_split}_eval_file'] = vars(args)[f'{data_split}' + '_w_add_eval_file']
+        if not args.use_projection and args.token_embed_size == 0:
+            log.info('Turning on projection to ensure dimension agreement...')
+            vars(args)['use_projection'] = True
+    elif args.use_token == "cq" or args.use_exact == "cq":
+        # Use added feature files for context and question
+        log.info('Using context & question feature files based on provided input...')
+        log.info('To manually specify files, set --use_default_task_files to False.')
+        for data_split in ['train', 'dev', 'test']:
+            # .npz record files
+            vars(args)[f'{data_split}_record_file'] = vars(args)[f'{data_split}' + '_qtok_record_file']
+            # .json eval files
+            vars(args)[f'{data_split}_eval_file'] = vars(args)[f'{data_split}' + '_qtok_eval_file']
+
+    return args, log
 
 
 if __name__ == '__main__':
