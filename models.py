@@ -160,9 +160,9 @@ class BiDAF(nn.Module):
         # Project context/question embeddings from final_doc_hidden_size -> final_hidden_size
         if self.use_projection:
             if self.use_exact or self.use_token:
-                c_emb = self.projection(c_emb)  # (batch_size, c_len, final_hidden_size)
+                c_emb = self.project(c_emb)  # (batch_size, c_len, final_hidden_size)
                 if self.context_and_question:
-                    q_emb = self.projection(q_emb)  # (batch_size, q_len, final_hidden_size)
+                    q_emb = self.project(q_emb)  # (batch_size, q_len, final_hidden_size)
         # else: let final_hidden_size = final_doc_hidden_size
 
         c_emb = self.hwy(c_emb)  # (batch_size, c_len, final_hidden_size)
