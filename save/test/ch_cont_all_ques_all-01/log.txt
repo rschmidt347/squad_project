@@ -1,0 +1,35 @@
+[03.10.21 19:11:59] Args: {
+    "batch_size": 64,
+    "char_emb_file": "./data/char_emb.json",
+    "dev_eval_file": "./data/dev_qtok_eval.json",
+    "dev_record_file": "./data/dev_qtok_rec.npz",
+    "hidden_size": 100,
+    "load_path": "./save/train/ch_cont_all_ques_all-01/best.pth.tar",
+    "max_ans_len": 15,
+    "name": "ch_cont_all_ques_all",
+    "num_mod_layers": 2,
+    "num_visuals": 10,
+    "num_workers": 4,
+    "rnn_type": "LSTM",
+    "save_dir": "./save/test/ch_cont_all_ques_all-01",
+    "split": "dev",
+    "sub_file": "submission.csv",
+    "test_eval_file": "./data/test_qtok_eval.json",
+    "test_record_file": "./data/test_qtok_rec.npz",
+    "token_embed_size": 0,
+    "train_eval_file": "./data/train_qtok_eval.json",
+    "train_record_file": "./data/train_qtok_rec.npz",
+    "use_char_embeddings": true,
+    "use_exact": true,
+    "use_projection": false,
+    "use_squad_v2": true,
+    "use_token": true,
+    "word_emb_file": "./data/word_emb.json"
+}
+[03.10.21 19:11:59] Loading embeddings...
+[03.10.21 19:12:03] Building model...
+[03.10.21 19:12:05] Loading checkpoint from ./save/train/ch_cont_all_ques_all-01/best.pth.tar...
+[03.10.21 19:12:05] Building dataset...
+[03.10.21 19:12:06] Evaluating on dev split...
+[03.10.21 19:12:28] Dev NLL: 02.72, F1: 66.26, EM: 63.13, AvNA: 72.26
+[03.10.21 19:12:28] Writing submission file to ./save/test/ch_cont_all_ques_all-01/dev_submission.csv...
