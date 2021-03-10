@@ -194,12 +194,13 @@ def get_test_args():
         raise ValueError(f'Unrecognized RNN type: "{args.rnn_type}" - pick "LSTM" or "GRU"')
 
     # Error handling for added features at train time
-    if args.use_token not in ('none', 'c', 'cq'):
+    if args.use_token not in ('False', 'c', 'cq'):
         raise ValueError(f'Unrecognized option for token use: "{args.use_token}" - pick "none", "c", or "cq"')
-    if args.use_exact not in ('none', 'c', 'cq'):
+    if args.use_exact not in ('False', 'c', 'cq'):
         raise ValueError(f'Unrecognized option for EM use: "{args.use_exact}" - pick "none", "c", or "cq"')
 
     return args
+
 
 def get_add_feat_args():
     """Get args used by setup_meta_feat.py"""
@@ -218,6 +219,7 @@ def get_add_feat_args():
     args = parser.parse_args()
 
     return args
+
 
 def add_feature_filepath_args(parser):
     """List of filenames for datasets with added features"""
@@ -379,13 +381,13 @@ def add_train_test_args(parser):
     # - Options for use of exact match features
     parser.add_argument('--use_exact',
                         type=str,
-                        default='False',
+                        default=False,
                         choices=('False', 'c', 'q'),
                         help='Whether to add exact match features. Can specify context only or context & question.')
     # - Options for use of token features (POS, NER)
     parser.add_argument('--use_token',
                         type=str,
-                        default='False',
+                        default=False,
                         choices=('False', 'c', 'q'),
                         help='Whether to add token features (POS, NER). Can specify context only or context & question.')
     # - Flag for size of embedding for NER and POS
