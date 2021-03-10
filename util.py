@@ -41,7 +41,8 @@ class SQuAD(data.Dataset):
         data_path (str): Path to .npz file containing pre-processed dataset.
         use_v2 (bool): Whether to use SQuAD 2.0 questions. Otherwise only use SQuAD 1.1.
     """
-    def __init__(self, data_path, use_v2=True, use_token=False, use_exact=False):
+    def __init__(self, data_path, use_v2=True, use_token=False, use_exact=False,
+                 context_and_question=False):
         super(SQuAD, self).__init__()
 
         dataset = np.load(data_path)
@@ -71,11 +72,15 @@ class SQuAD(data.Dataset):
         self.valid_idxs = [idx for idx in range(len(self.ids))
                            if use_v2 or self.y1s[idx].item() >= 0]
 
+        self.context_and_question = context_and_question
         self.use_token = use_token
         if self.use_token:
             # Load indices for token features
             self.ner_idxs = torch.from_numpy(dataset['ner_idxs']).long()
             self.pos_idxs = torch.from_numpy(dataset['pos_idxs']).long()
+            if self.context_and_question:
+                self.qner_idxs = torch.from_numpy(dataset['qner_idxs']).long()
+                self.qpos_idxs = torch.from_numpy(dataset['qpos_idxs']).long()
 
             if use_v2:
                 # SQuAD 2.0: Use index 1 for no-answer token (token 1 = OOV)
@@ -84,12 +89,22 @@ class SQuAD(data.Dataset):
                 self.ner_idxs = torch.cat((ones, self.ner_idxs), dim=1)
                 self.pos_idxs = torch.cat((ones, self.pos_idxs), dim=1)
 
+                if self.context_and_question:
+                    batch_size, q_len = self.qner_idxs.size()
+                    ones = torch.ones((batch_size, 1), dtype=torch.int64)
+                    self.qner_idxs = torch.cat((ones, self.qner_idxs), dim=1)
+                    self.qpos_idxs = torch.cat((ones, self.qpos_idxs), dim=1)
+
         self.use_exact = use_exact
         if self.use_exact:
             # Load exact match features
             self.exact_orig = torch.from_numpy(dataset['exact_orig_feat']).long()
             self.exact_uncased = torch.from_numpy(dataset['exact_uncased_feat']).long()
             self.exact_lemma = torch.from_numpy(dataset['exact_lemma_feat']).long()
+            if self.context_and_question:
+                self.qexact_orig = torch.from_numpy(dataset['qexact_orig_feat']).long()
+                self.qexact_uncased = torch.from_numpy(dataset['qexact_uncased_feat']).long()
+                self.qexact_lemma = torch.from_numpy(dataset['qexact_lemma_feat']).long()
 
             if use_v2:
                 # SQuAD 2.0: Use index 0 for no-answer token (token 0 = no-match)
@@ -98,6 +113,12 @@ class SQuAD(data.Dataset):
                 self.exact_orig = torch.cat((zeros, self.exact_orig), dim=1)
                 self.exact_uncased = torch.cat((zeros, self.exact_uncased), dim=1)
                 self.exact_lemma = torch.cat((zeros, self.exact_lemma), dim=1)
+                if self.context_and_question:
+                    batch_size, q_len = self.qexact_orig.size()
+                    zeros = torch.zeros((batch_size, 1), dtype=torch.int64)
+                    self.qexact_orig = torch.cat((zeros, self.qexact_orig), dim=1)
+                    self.qexact_uncased = torch.cat((zeros, self.qexact_uncased), dim=1)
+                    self.qexact_lemma = torch.cat((zeros, self.qexact_lemma), dim=1)
 
     def __getitem__(self, idx):
         idx = self.valid_idxs[idx]
@@ -111,9 +132,13 @@ class SQuAD(data.Dataset):
 
         if self.use_token:
             example += (self.ner_idxs[idx], self.pos_idxs[idx])
+            if self.context_and_question:
+                example += (self.qner_idxs[idx], self.qpos_idxs[idx])
 
         if self.use_exact:
             example += (self.exact_orig[idx], self.exact_uncased[idx], self.exact_lemma[idx])
+            if self.context_and_question:
+                example += (self.qexact_orig[idx], self.qexact_uncased[idx], self.qexact_lemma[idx])
 
         return example
 
@@ -125,16 +150,13 @@ def collate_fn(examples):
     """Create batch tensors from a list of individual examples returned
     by `SQuAD.__getitem__`. Merge examples of different length by padding
     all examples to the maximum length in the batch.
-
     Args:
         examples (list): List of tuples of the form (context_idxs, context_char_idxs,
         question_idxs, question_char_idxs, y1s, y2s, ids, ...).
-
     Returns:
         examples (tuple): Tuple of tensors (context_idxs, context_char_idxs, question_idxs,
         question_char_idxs, y1s, y2s, ids, ...). All of shape (batch_size, ...), where
         the remaining dimensions are the maximum length of examples in the input.
-
     Adapted from:
         https://github.com/yunjey/seq2seq-dataloader
     """
@@ -245,6 +267,151 @@ def collate_fn(examples):
         exact_lemma = merge_1d_meta(exact_lemma, max_length)
         return (context_idxs, context_char_idxs, question_idxs, question_char_idxs, y1s, y2s, ids,
                 ner_idxs, pos_idxs, exact_orig, exact_uncased, exact_lemma)
+
+
+def collate_fn_cq(examples):
+    """Create batch tensors from a list of individual examples returned
+    by `SQuAD.__getitem__`. Merge examples of different length by padding
+    all examples to the maximum length in the batch.
+    Args:
+        examples (list): List of tuples of the form (context_idxs, context_char_idxs,
+        question_idxs, question_char_idxs, y1s, y2s, ids, ...).
+    Returns:
+        examples (tuple): Tuple of tensors (context_idxs, context_char_idxs, question_idxs,
+        question_char_idxs, y1s, y2s, ids, ...). All of shape (batch_size, ...), where
+        the remaining dimensions are the maximum length of examples in the input.
+    Adapted from:
+        https://github.com/yunjey/seq2seq-dataloader
+    """
+    def merge_0d(scalars, dtype=torch.int64):
+        return torch.tensor(scalars, dtype=dtype)
+
+    def merge_1d(arrays, dtype=torch.int64, pad_value=0):
+        lengths = [(a != pad_value).sum() for a in arrays]
+        padded = torch.zeros(len(arrays), max(lengths), dtype=dtype)
+        for i, seq in enumerate(arrays):
+            end = lengths[i]
+            padded[i, :end] = seq[:end]
+        return padded
+
+    def merge_2d(matrices, dtype=torch.int64, pad_value=0):
+        heights = [(m.sum(1) != pad_value).sum() for m in matrices]
+        widths = [(m.sum(0) != pad_value).sum() for m in matrices]
+        padded = torch.zeros(len(matrices), max(heights), max(widths), dtype=dtype)
+        for i, seq in enumerate(matrices):
+            height, width = heights[i], widths[i]
+            padded[i, :height, :width] = seq[:height, :width]
+        return padded
+
+    def get_max_length(arrays, pad_value=0):
+        lengths = [(a != pad_value).sum() for a in arrays]
+        return max(lengths)
+
+    def merge_1d_meta(arrays, max_length, dtype=torch.int64):
+        padded = torch.zeros(len(arrays), max_length, dtype=dtype)
+        for i, seq in enumerate(arrays):
+            padded[i, :max_length] = seq[:max_length]
+        return padded
+
+    num_elts = len(examples[0])
+
+    if num_elts == 7:
+        # No added features
+        # Group by tensor type
+        context_idxs, context_char_idxs, question_idxs, question_char_idxs, y1s, y2s, ids = zip(*examples)
+        # Merge into batch tensors
+        context_idxs = merge_1d(context_idxs)
+        context_char_idxs = merge_2d(context_char_idxs)
+        question_idxs = merge_1d(question_idxs)
+        question_char_idxs = merge_2d(question_char_idxs)
+        y1s = merge_0d(y1s)
+        y2s = merge_0d(y2s)
+        ids = merge_0d(ids)
+        return (context_idxs, context_char_idxs,
+                question_idxs, question_char_idxs,
+                y1s, y2s, ids)
+
+    elif num_elts == 11:
+        # Token features only
+        context_idxs, context_char_idxs, question_idxs, question_char_idxs, y1s, y2s, ids, \
+            ner_idxs, pos_idxs, qner_idxs, qpos_idxs = zip(*examples)
+        # Merge into batch tensors
+        context_idxs = merge_1d(context_idxs)
+        context_char_idxs = merge_2d(context_char_idxs)
+        question_idxs = merge_1d(question_idxs)
+        question_char_idxs = merge_2d(question_char_idxs)
+        y1s = merge_0d(y1s)
+        y2s = merge_0d(y2s)
+        ids = merge_0d(ids)
+        # Get maximum batch length of context idxs
+        max_length = get_max_length(context_idxs)
+        ner_idxs = merge_1d_meta(ner_idxs, max_length)
+        pos_idxs = merge_1d_meta(pos_idxs, max_length)
+        # Get maximum batch length of question idxs
+        max_length = get_max_length(question_idxs)
+        qner_idxs = merge_1d_meta(qner_idxs, max_length)
+        qpos_idxs = merge_1d_meta(qpos_idxs, max_length)
+        return (context_idxs, context_char_idxs, question_idxs, question_char_idxs, y1s, y2s, ids,
+                ner_idxs, pos_idxs, qner_idxs, qpos_idxs)
+
+    elif num_elts == 13:
+        # Exact match features only
+        context_idxs, context_char_idxs, question_idxs, question_char_idxs, y1s, y2s, ids, \
+            exact_orig, exact_uncased, exact_lemma, qexact_orig, qexact_uncased, qexact_lemma = zip(*examples)
+        # Merge into batch tensors
+        context_idxs = merge_1d(context_idxs)
+        context_char_idxs = merge_2d(context_char_idxs)
+        question_idxs = merge_1d(question_idxs)
+        question_char_idxs = merge_2d(question_char_idxs)
+        y1s = merge_0d(y1s)
+        y2s = merge_0d(y2s)
+        ids = merge_0d(ids)
+        # Get maximum batch length of context idxs
+        max_length = get_max_length(context_idxs)
+        exact_orig = merge_1d_meta(exact_orig, max_length)
+        exact_uncased = merge_1d_meta(exact_uncased, max_length)
+        exact_lemma = merge_1d_meta(exact_lemma, max_length)
+        # Get maximum batch length of question idxs
+        max_length = get_max_length(question_idxs)
+        qexact_orig = merge_1d_meta(qexact_orig, max_length)
+        qexact_uncased = merge_1d_meta(qexact_uncased, max_length)
+        qexact_lemma = merge_1d_meta(qexact_lemma, max_length)
+        return (context_idxs, context_char_idxs, question_idxs, question_char_idxs, y1s, y2s, ids,
+                exact_orig, exact_uncased, exact_lemma, qexact_orig, qexact_uncased, qexact_lemma)
+
+    elif num_elts == 17:
+        # All extra features
+        context_idxs, context_char_idxs, question_idxs, question_char_idxs, y1s, y2s, ids, \
+            ner_idxs, pos_idxs, qner_idxs, qpos_idxs, \
+            exact_orig, exact_uncased, exact_lemma, qexact_orig, qexact_uncased, qexact_lemma = zip(*examples)
+        # Merge into batch tensors
+        context_idxs = merge_1d(context_idxs)
+        context_char_idxs = merge_2d(context_char_idxs)
+        question_idxs = merge_1d(question_idxs)
+        question_char_idxs = merge_2d(question_char_idxs)
+        y1s = merge_0d(y1s)
+        y2s = merge_0d(y2s)
+        ids = merge_0d(ids)
+
+        # Context features
+        max_length = get_max_length(context_idxs)
+        ner_idxs = merge_1d_meta(ner_idxs, max_length)
+        pos_idxs = merge_1d_meta(pos_idxs, max_length)
+        exact_orig = merge_1d_meta(exact_orig, max_length)
+        exact_uncased = merge_1d_meta(exact_uncased, max_length)
+        exact_lemma = merge_1d_meta(exact_lemma, max_length)
+
+        # Question features
+        max_length = get_max_length(question_idxs)
+        qner_idxs = merge_1d_meta(qner_idxs, max_length)
+        qpos_idxs = merge_1d_meta(qpos_idxs, max_length)
+        qexact_orig = merge_1d_meta(qexact_orig, max_length)
+        qexact_uncased = merge_1d_meta(qexact_uncased, max_length)
+        qexact_lemma = merge_1d_meta(qexact_lemma, max_length)
+
+        return (context_idxs, context_char_idxs, question_idxs, question_char_idxs, y1s, y2s, ids,
+                ner_idxs, pos_idxs, qner_idxs, qpos_idxs,
+                exact_orig, exact_uncased, exact_lemma, qexact_orig, qexact_uncased, qexact_lemma)
 
 
 class AverageMeter:

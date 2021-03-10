@@ -10,8 +10,10 @@ import argparse
 def get_setup_args(parser=None):
 
     """Get arguments needed in setup.py."""
+    is_base_setup = False
     if parser is None:
         parser = argparse.ArgumentParser('Download and pre-process SQuAD')
+        is_base_setup = True
 
     add_common_args(parser)
 
@@ -83,9 +85,10 @@ def get_setup_args(parser=None):
                         default=True,
                         help='Process examples from the test set')
 
-    args = parser.parse_args()
+    if is_base_setup:
+        args = parser.parse_args()
 
-    return args
+        return args
 
 
 def get_train_args():
@@ -153,6 +156,12 @@ def get_train_args():
     if args.rnn_type not in ('LSTM', 'GRU'):
         raise ValueError(f'Unrecognized RNN type: "{args.rnn_type}" - pick "LSTM" or "GRU"')
 
+    # Error handling for added features at train time
+    if args.use_token not in (False, 'c', 'cq'):
+        raise ValueError(f'Unrecognized option for token use: "{args.use_token}" - pick "False", "c", or "cq"')
+    if args.use_exact not in (False, 'c', 'cq'):
+        raise ValueError(f'Unrecognized option for EM use: "{args.use_exact}" - pick "False", "c", or "cq"')
+
     return args
 
 
@@ -184,7 +193,14 @@ def get_test_args():
     if args.rnn_type not in ('LSTM', 'GRU'):
         raise ValueError(f'Unrecognized RNN type: "{args.rnn_type}" - pick "LSTM" or "GRU"')
 
+    # Error handling for added features at train time
+    if args.use_token not in (False, 'c', 'cq'):
+        raise ValueError(f'Unrecognized option for token use: "{args.use_token}" - pick "False", "c", or "cq"')
+    if args.use_exact not in (False, 'c', 'cq'):
+        raise ValueError(f'Unrecognized option for EM use: "{args.use_exact}" - pick "False", "c", or "cq"')
+
     return args
+
 
 def get_add_feat_args():
     """Get args used by setup_meta_feat.py"""
@@ -203,6 +219,7 @@ def get_add_feat_args():
     args = parser.parse_args()
 
     return args
+
 
 def add_feature_filepath_args(parser):
     """List of filenames for datasets with added features"""
@@ -246,7 +263,26 @@ def add_feature_filepath_args(parser):
                         default='./data/test_w_add_meta.json')
 
     # 2) Data files with tokens for context and questions
-    # TODO ...
+    # - .npz record files
+    parser.add_argument('--train_qtok_record_file',
+                        type=str,
+                        default='./data/train_qtok_rec.npz')
+    parser.add_argument('--dev_qtok_record_file',
+                        type=str,
+                        default='./data/dev_qtok_rec.npz')
+    parser.add_argument('--test_qtok_record_file',
+                        type=str,
+                        default='./data/test_qtok_rec.npz')
+    # - .json evaluation files
+    parser.add_argument('--train_qtok_eval_file',
+                        type=str,
+                        default='./data/train_qtok_eval.json')
+    parser.add_argument('--dev_qtok_eval_file',
+                        type=str,
+                        default='./data/dev_qtok_eval.json')
+    parser.add_argument('--test_qtok_eval_file',
+                        type=str,
+                        default='./data/test_qtok_eval.json')
 
 
 def add_common_args(parser):
@@ -342,18 +378,23 @@ def add_train_test_args(parser):
                         default=False,
                         help='Flag to use character embeddings in the BiDAF model.')
     # 3) Token features
-    # - Flag for use of exact match features
+    # - Options for use of exact match features
     parser.add_argument('--use_exact',
-                        type=lambda s: s.lower() in ('yes', 'y', 'true', 't', '1'),
+                        type=str,
                         default=False,
-                        help='Whether to add exact match features')
-    # - Flag for use of token features (POS, NER)
+                        help='Whether to add exact match features. Can specify context only or context & question.')
+    # - Options for use of token features (POS, NER)
     parser.add_argument('--use_token',
-                        type=lambda s: s.lower() in ('yes', 'y', 'true', 't', '1'),
+                        type=str,
                         default=False,
-                        help='Whether to token features')
+                        help='Whether to add token features (POS, NER). Can specify context only or context & question.')
     # - Flag for size of embedding for NER and POS
     parser.add_argument('--token_embed_size',
                         type=int,
                         default=0,
                         help='Size of embedding for NER and POS.')
+    # - Flag for use of projection of embedding with added features
+    parser.add_argument('--use_projection',
+                        type=lambda s: s.lower() in ('yes', 'y', 'true', 't', '1'),
+                        default=False,
+                        help='Whether to use projection when adding features')

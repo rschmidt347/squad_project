@@ -36,34 +36,34 @@ def fix_quotes(tokens_list):
     return tokens_list
 
 
-def tokenize_context(context_list, lemma_list, ner_list, pos_list):
-    context_list = fix_quotes(context_list)
+def tokenize_doc(doc_list, lemma_list, ner_list, pos_list):
+    doc_list = fix_quotes(doc_list)
     lemma_list = fix_quotes(lemma_list)
 
-    assert len(context_list) == len(lemma_list), 'context_list not same length as lemma_list'
-    assert len(context_list) == len(ner_list), 'context_list not same length as ner_list'
-    assert len(context_list) == len(pos_list), 'context_list not same length as pos_list'
+    assert len(doc_list) == len(lemma_list), 'context_list not same length as lemma_list'
+    assert len(doc_list) == len(ner_list), 'context_list not same length as ner_list'
+    assert len(doc_list) == len(pos_list), 'context_list not same length as pos_list'
 
-    if context_list[0].isspace():
-        context_list = context_list[1:]
+    if doc_list[0].isspace():
+        doc_list = doc_list[1:]
         lemma_list = lemma_list[1:]
         ner_list = ner_list[1:]
         pos_list = pos_list[1:]
 
-    if context_list[-1].isspace():
-        context_list = context_list[:-1]
+    if doc_list[-1].isspace():
+        doc_list = doc_list[:-1]
         lemma_list = lemma_list[:-1]
         ner_list = ner_list[:-1]
         pos_list = pos_list[:-1]
 
-    for i in range(len(context_list) - 1):
-        if (context_list[i] == "'") and (context_list[i+1] == "'"):
-            context_list = context_list[:i] + ['"'] + context_list[i+2:]
+    for i in range(len(doc_list) - 1):
+        if (doc_list[i] == "'") and (doc_list[i+1] == "'"):
+            doc_list = doc_list[:i] + ['"'] + doc_list[i+2:]
             lemma_list = lemma_list[:i] + ['"'] + lemma_list[i+2:]
             ner_list = ner_list[:i] + ['O'] + ner_list[i+2:]
             pos_list = pos_list[:i] + ['"'] + pos_list[i+2:]
 
-    return context_list, lemma_list, ner_list, pos_list
+    return doc_list, lemma_list, ner_list, pos_list
 
 
 def process_file_w_add(filename, data_type, word_counter, char_counter):
@@ -77,10 +77,10 @@ def process_file_w_add(filename, data_type, word_counter, char_counter):
             for para in article["paragraphs"]:
                 context = para["context"].replace("''", '" ').replace("``", '" ').replace("' '", '" ')
 
-                context_tokens, lemma, ner, pos = tokenize_context(para["context_tokens"],
-                                                                   para["lemma"],
-                                                                   para["ner"],
-                                                                   para["pos"])
+                context_tokens, lemma, ner, pos = tokenize_doc(para["context_tokens"],
+                                                               para["lemma"],
+                                                               para["ner"],
+                                                               para["pos"])
 
                 context_chars = [list(token) for token in context_tokens]
                 spans = convert_idx(context, context_tokens)
@@ -91,15 +91,19 @@ def process_file_w_add(filename, data_type, word_counter, char_counter):
 
                 for qa in para["qas"]:
                     total += 1
-                    ques = qa["question"].replace(
-                        "''", '" ').replace("``", '" ')
-                    ques_tokens = fix_quotes(qa["ques_tokens"])
+                    ques = qa["question"].replace("''", '" ').replace("``", '" ').replace("' '", '" ')
+
+                    ques_tokens, qlemma, qner, qpos = tokenize_doc(qa["ques_tokens"],
+                                                                   qa["qlemma"],
+                                                                   qa["qner"],
+                                                                   qa["qpos"])
+
                     ques_chars = [list(token) for token in ques_tokens]
                     for token in ques_tokens:
                         word_counter[token] += 1
                         for char in token:
                             char_counter[char] += 1
-                    qlemma_tokens = fix_quotes(qa["qlemma"])
+
                     y1s, y2s = [], []
                     answer_texts = []
                     for answer in qa["answers"]:
@@ -121,7 +125,9 @@ def process_file_w_add(filename, data_type, word_counter, char_counter):
                                "lemma_tokens": lemma,
                                "ner_tokens": ner,
                                "pos_tokens": pos,
-                               "qlemma_tokens": qlemma_tokens,
+                               "qlemma_tokens": qlemma,
+                               "qner_tokens": qner,
+                               "qpos_tokens": qpos,
                                "y1s": y1s,
                                "y2s": y2s,
                                "id": total}
@@ -166,6 +172,11 @@ def build_feat_w_add(args, examples, data_type, out_file, word2idx_dict, char2id
     pos_idxs = []
     ques_idxs = []
     ques_char_idxs = []
+    qexact_orig_feat = []
+    qexact_uncased_feat = []
+    qexact_lemma_feat = []
+    qner_idxs = []
+    qpos_idxs = []
     y1s = []
     y2s = []
     ids = []
@@ -210,6 +221,13 @@ def build_feat_w_add(args, examples, data_type, out_file, word2idx_dict, char2id
         ner_idx = np.zeros([para_limit], dtype=np.int32)
         pos_idx = np.zeros([para_limit], dtype=np.int32)
 
+        qexact_orig = np.zeros([ques_limit], dtype=np.int32)
+        qexact_uncased = np.zeros([ques_limit], dtype=np.int32)
+        qexact_lemma = np.zeros([ques_limit], dtype=np.int32)
+
+        qner_idx = np.zeros([ques_limit], dtype=np.int32)
+        qpos_idx = np.zeros([ques_limit], dtype=np.int32)
+
         for i, token in enumerate(example["context_tokens"]):
             context_idx[i] = _get_word(token)
             # One hot encoding of exact match features
@@ -232,7 +250,23 @@ def build_feat_w_add(args, examples, data_type, out_file, word2idx_dict, char2id
 
         for i, token in enumerate(example["ques_tokens"]):
             ques_idx[i] = _get_word(token)
+            # One hot encoding of exact match features for questions
+            qexact_orig[i] = 1 if token in example["context_tokens"] else 0
+            qexact_uncased[i] = 1 if token.lower() in [ex.lower() for ex in example["context_tokens"]] else 0
+            qexact_lemma[i] = 1 if example["qlemma_tokens"][i] in example["lemma_tokens"] else 0
         ques_idxs.append(ques_idx)
+        qexact_orig_feat.append(qexact_orig)
+        qexact_uncased_feat.append(qexact_uncased)
+        qexact_lemma_feat.append(qexact_lemma)
+
+        # Get indices for NER and POS tokens for question words
+        for i, token in enumerate(example["qner_tokens"]):
+            qner_idx[i] = _get_ner(token)
+        qner_idxs.append(qner_idx)
+
+        for i, token in enumerate(example["qpos_tokens"]):
+            qpos_idx[i] = _get_pos(token)
+        qpos_idxs.append(qpos_idx)
 
         for i, token in enumerate(example["context_chars"]):
             for j, char in enumerate(token):
@@ -267,6 +301,11 @@ def build_feat_w_add(args, examples, data_type, out_file, word2idx_dict, char2id
              pos_idxs=np.array(pos_idxs),
              ques_idxs=np.array(ques_idxs),
              ques_char_idxs=np.array(ques_char_idxs),
+             qexact_orig_feat=np.array(qexact_orig_feat),
+             qexact_uncased_feat=np.array(qexact_uncased_feat),
+             qexact_lemma_feat=np.array(qexact_lemma_feat),
+             qner_idxs=np.array(qner_idxs),
+             qpos_idxs=np.array(qpos_idxs),
              y1s=np.array(y1s),
              y2s=np.array(y2s),
              ids=np.array(ids))
@@ -304,8 +343,8 @@ def pre_process_w_add(args):
 
     save(args.train_w_add_eval_file, train_eval, message="train eval w add")
     save(args.dev_w_add_eval_file, dev_eval, message="dev eval w add")
-    save(args.ner2idx_file, ner2idx_dict, message="NER dictionary")
-    save(args.pos2idx_file, pos2idx_dict, message="POS dictionary")
+    # save(args.ner2idx_file, ner2idx_dict, message="NER dictionary")
+    # save(args.pos2idx_file, pos2idx_dict, message="POS dictionary")
     save(args.dev_w_add_meta_file, dev_meta, message="dev meta w add")
 
 
