@@ -157,10 +157,10 @@ def get_train_args():
         raise ValueError(f'Unrecognized RNN type: "{args.rnn_type}" - pick "LSTM" or "GRU"')
 
     # Error handling for added features at train time
-    if args.use_token not in ('none', 'c', 'cq'):
-        raise ValueError(f'Unrecognized option for token use: "{args.use_token}" - pick "none", "c", or "cq"')
-    if args.use_exact not in ('none', 'c', 'cq'):
-        raise ValueError(f'Unrecognized option for EM use: "{args.use_exact}" - pick "none", "c", or "cq"')
+    if args.use_token not in ('False', 'c', 'cq'):
+        raise ValueError(f'Unrecognized option for token use: "{args.use_token}" - pick "False", "c", or "cq"')
+    if args.use_exact not in ('False', 'c', 'cq'):
+        raise ValueError(f'Unrecognized option for EM use: "{args.use_exact}" - pick "False", "c", or "cq"')
 
     return args
 
@@ -195,9 +195,9 @@ def get_test_args():
 
     # Error handling for added features at train time
     if args.use_token not in ('False', 'c', 'cq'):
-        raise ValueError(f'Unrecognized option for token use: "{args.use_token}" - pick "none", "c", or "cq"')
+        raise ValueError(f'Unrecognized option for token use: "{args.use_token}" - pick "False", "c", or "cq"')
     if args.use_exact not in ('False', 'c', 'cq'):
-        raise ValueError(f'Unrecognized option for EM use: "{args.use_exact}" - pick "none", "c", or "cq"')
+        raise ValueError(f'Unrecognized option for EM use: "{args.use_exact}" - pick "False", "c", or "cq"')
 
     return args
 
