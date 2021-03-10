@@ -21,7 +21,7 @@ from models import BiDAF
 from tensorboardX import SummaryWriter
 from tqdm import tqdm
 from ujson import load as json_load
-from util import collate_fn, SQuAD
+from util import collate_fn, collate_fn_cq, SQuAD
 
 
 def main(args):
@@ -102,7 +102,7 @@ def main(args):
                                    batch_size=args.batch_size,
                                    shuffle=True,
                                    num_workers=args.num_workers,
-                                   collate_fn=collate_fn(context_and_question=context_and_question_flag))
+                                   collate_fn=collate_fn_cq if context_and_question_flag else collate_fn)
     dev_dataset = SQuAD(args.dev_record_file, args.use_squad_v2,
                         use_token=token_flag,
                         use_exact=exact_flag,
@@ -111,7 +111,7 @@ def main(args):
                                  batch_size=args.batch_size,
                                  shuffle=False,
                                  num_workers=args.num_workers,
-                                 collate_fn=collate_fn(context_and_question=context_and_question_flag))
+                                 collate_fn=collate_fn_cq if context_and_question_flag else collate_fn)
 
     # Train
     log.info('Training...')
