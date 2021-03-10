@@ -157,9 +157,9 @@ def get_train_args():
         raise ValueError(f'Unrecognized RNN type: "{args.rnn_type}" - pick "LSTM" or "GRU"')
 
     # Error handling for added features at train time
-    if args.use_token not in ('False', 'c', 'cq'):
+    if args.use_token not in (False, 'c', 'cq'):
         raise ValueError(f'Unrecognized option for token use: "{args.use_token}" - pick "False", "c", or "cq"')
-    if args.use_exact not in ('False', 'c', 'cq'):
+    if args.use_exact not in (False, 'c', 'cq'):
         raise ValueError(f'Unrecognized option for EM use: "{args.use_exact}" - pick "False", "c", or "cq"')
 
     return args
@@ -194,9 +194,9 @@ def get_test_args():
         raise ValueError(f'Unrecognized RNN type: "{args.rnn_type}" - pick "LSTM" or "GRU"')
 
     # Error handling for added features at train time
-    if args.use_token not in ('False', 'c', 'cq'):
+    if args.use_token not in (False, 'c', 'cq'):
         raise ValueError(f'Unrecognized option for token use: "{args.use_token}" - pick "False", "c", or "cq"')
-    if args.use_exact not in ('False', 'c', 'cq'):
+    if args.use_exact not in (False, 'c', 'cq'):
         raise ValueError(f'Unrecognized option for EM use: "{args.use_exact}" - pick "False", "c", or "cq"')
 
     return args
@@ -382,13 +382,11 @@ def add_train_test_args(parser):
     parser.add_argument('--use_exact',
                         type=str,
                         default=False,
-                        choices=('False', 'c', 'q'),
                         help='Whether to add exact match features. Can specify context only or context & question.')
     # - Options for use of token features (POS, NER)
     parser.add_argument('--use_token',
                         type=str,
                         default=False,
-                        choices=('False', 'c', 'q'),
                         help='Whether to add token features (POS, NER). Can specify context only or context & question.')
     # - Flag for size of embedding for NER and POS
     parser.add_argument('--token_embed_size',
