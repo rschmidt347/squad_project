@@ -53,6 +53,9 @@ def main(args):
     token_flag = True if args.use_token in ('c', 'cq') else False
     exact_flag = True if args.use_token in ('c', 'cq') else False
     context_and_question_flag = True if args.use_token == 'cq' else False
+    # Switch over to proper data files if none specified
+    if args.use_default_task_files:
+        args, log = switch_to_default_files(args, log)
 
     model = BiDAF(word_vectors=word_vectors,
                   char_vectors=char_vectors if args.use_char_embeddings else None,
@@ -87,10 +90,6 @@ def main(args):
     optimizer = optim.Adadelta(model.parameters(), args.lr,
                                weight_decay=args.l2_wd)
     scheduler = sched.LambdaLR(optimizer, lambda s: 1.)  # Constant LR
-
-    # Switch over to proper data files if none specified
-    if args.use_default_task_files:
-        args, log = switch_to_default_files(args, log)
 
     # Get data loader
     log.info('Building dataset...')
