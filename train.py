@@ -87,10 +87,10 @@ def main(args):
                                  log=log)
 
     # Get optimizer
-    if args.optimizer == 'Adadelta':
+    if args.model_optimizer == 'Adadelta':
         optimizer = optim.Adadelta(model.parameters(), args.lr,
                                    weight_decay=args.l2_wd)
-    if args.optimizer == 'Adamax':
+    if args.model_optimizer == 'Adamax':
         log.info('Forcing default Adamax learning rate...')
         optimizer = optim.Adam(model.parameters(),
                                weight_decay=args.l2_wd)

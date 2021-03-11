@@ -142,7 +142,7 @@ def get_train_args():
                         help='Decay rate for exponential moving average of parameters.')
     # -- New parser argument --
     # - Optimizer
-    parser.add_argument('--optimizer',
+    parser.add_argument('--model_optimizer',
                         type=str,
                         default='Adadelta',
                         choices=('Adadelta', 'Adamax'),
@@ -408,5 +408,5 @@ def train_test_error_checker(args):
         raise ValueError(f'Unrecognized option for EM use: "{args.use_exact}" - pick "False", "c", or "cq"')
 
     # Error handling for optimizer
-    if args.optimizer not in ('Adadelta', 'Adamax'):
-        raise ValueError(f'Unrecognized optimizer: "{args.optimizer}" - pick "Adadelta" or "Adamax"')
+    if args.model_optimizer not in ('Adadelta', 'Adamax'):
+        raise ValueError(f'Unrecognized optimizer: "{args.model_optimizer}" - pick "Adadelta" or "Adamax"')
