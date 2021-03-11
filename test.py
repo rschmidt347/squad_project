@@ -48,7 +48,7 @@ def main(args):
     log.info('Building model...')
     # Take note of extra features
     token_flag = True if args.use_token in ('c', 'cq') else False
-    exact_flag = True if args.use_token in ('c', 'cq') else False
+    exact_flag = True if args.use_exact in ('c', 'cq') else False
     context_and_question_flag = True if args.use_token == 'cq' else False
     # Switch over to proper data files if none specified
     if args.use_default_task_files:

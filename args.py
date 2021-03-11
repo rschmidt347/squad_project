@@ -140,9 +140,17 @@ def get_train_args():
                         type=float,
                         default=0.999,
                         help='Decay rate for exponential moving average of parameters.')
+    # -- New parser argument --
+    # - Optimizer
+    parser.add_argument('--optimizer',
+                        type=str,
+                        default='Adadelta',
+                        choices=('Adadelta', 'Adamax'),
+                        help='Choice of optimizer: supports Adadelta or Adamax.')
 
     args = parser.parse_args()
 
+    # Error and case handling on metric
     if args.metric_name == 'NLL':
         # Best checkpoint is the one that minimizes negative log-likelihood
         args.maximize_metric = False
@@ -161,6 +169,10 @@ def get_train_args():
         raise ValueError(f'Unrecognized option for token use: "{args.use_token}" - pick "False", "c", or "cq"')
     if args.use_exact not in (False, 'c', 'cq'):
         raise ValueError(f'Unrecognized option for EM use: "{args.use_exact}" - pick "False", "c", or "cq"')
+
+    # Error handling for optimizer
+    if args.optimizer not in ('Adadelta', 'Adamax'):
+        raise ValueError(f'Unrecognized optimizer: "{args.optimizer}" - pick "Adadelta" or "Adamax"')
 
     return args
 
@@ -315,7 +327,8 @@ def add_common_args(parser):
     parser.add_argument('--use_default_task_files',
                         type=bool,
                         default=True,
-                        help="Flag to automatically switch over to the correct files based on input.")
+                        help="Flag to automatically switch over to the \
+                        correct files based on input.")
 
 
 def add_train_test_args(parser):
