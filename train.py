@@ -51,7 +51,7 @@ def main(args):
     log.info('Building model...')
     # Take note of extra features
     token_flag = True if args.use_token in ('c', 'cq') else False
-    exact_flag = True if args.use_token in ('c', 'cq') else False
+    exact_flag = True if args.use_exact in ('c', 'cq') else False
     context_and_question_flag = True if args.use_token == 'cq' else False
     # Switch over to proper data files if none specified
     if args.use_default_task_files:
@@ -86,9 +86,16 @@ def main(args):
                                  maximize_metric=args.maximize_metric,
                                  log=log)
 
-    # Get optimizer and scheduler
-    optimizer = optim.Adadelta(model.parameters(), args.lr,
+    # Get optimizer
+    if args.optimizer == 'Adadelta':
+        optimizer = optim.Adadelta(model.parameters(), args.lr,
+                                   weight_decay=args.l2_wd)
+    if args.optimizer == 'Adamax':
+        log.info('Forcing default Adamax learning rate...')
+        optimizer = optim.Adam(model.parameters(),
                                weight_decay=args.l2_wd)
+
+    # Get scheduler
     scheduler = sched.LambdaLR(optimizer, lambda s: 1.)  # Constant LR
 
     # Get data loader
