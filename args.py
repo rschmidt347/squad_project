@@ -160,19 +160,8 @@ def get_train_args():
     else:
         raise ValueError(f'Unrecognized metric name: "{args.metric_name}"')
 
-    # Error handling for new arguments at train time
-    if args.rnn_type not in ('LSTM', 'GRU'):
-        raise ValueError(f'Unrecognized RNN type: "{args.rnn_type}" - pick "LSTM" or "GRU"')
-
-    # Error handling for added features at train time
-    if args.use_token not in (False, 'c', 'cq'):
-        raise ValueError(f'Unrecognized option for token use: "{args.use_token}" - pick "False", "c", or "cq"')
-    if args.use_exact not in (False, 'c', 'cq'):
-        raise ValueError(f'Unrecognized option for EM use: "{args.use_exact}" - pick "False", "c", or "cq"')
-
-    # Error handling for optimizer
-    if args.optimizer not in ('Adadelta', 'Adamax'):
-        raise ValueError(f'Unrecognized optimizer: "{args.optimizer}" - pick "Adadelta" or "Adamax"')
+    # Check for errors in new hyperparameters
+    train_test_error_checker(args)
 
     return args
 
@@ -201,15 +190,8 @@ def get_test_args():
     if not args.load_path:
         raise argparse.ArgumentError('Missing required argument --load_path')
 
-    # Error handling for new arguments at test time
-    if args.rnn_type not in ('LSTM', 'GRU'):
-        raise ValueError(f'Unrecognized RNN type: "{args.rnn_type}" - pick "LSTM" or "GRU"')
-
-    # Error handling for added features at train time
-    if args.use_token not in (False, 'c', 'cq'):
-        raise ValueError(f'Unrecognized option for token use: "{args.use_token}" - pick "False", "c", or "cq"')
-    if args.use_exact not in (False, 'c', 'cq'):
-        raise ValueError(f'Unrecognized option for EM use: "{args.use_exact}" - pick "False", "c", or "cq"')
+    # Check for errors in new hyperparameters
+    train_test_error_checker(args)
 
     return args
 
@@ -411,3 +393,20 @@ def add_train_test_args(parser):
                         type=lambda s: s.lower() in ('yes', 'y', 'true', 't', '1'),
                         default=False,
                         help='Whether to use projection when adding features')
+
+
+def train_test_error_checker(args):
+    """Check for input errors for args involving new model options."""
+    # Error handling for RNN type
+    if args.rnn_type not in ('LSTM', 'GRU'):
+        raise ValueError(f'Unrecognized RNN type: "{args.rnn_type}" - pick "LSTM" or "GRU"')
+
+    # Error handling for added features
+    if args.use_token not in (False, 'c', 'cq'):
+        raise ValueError(f'Unrecognized option for token use: "{args.use_token}" - pick "False", "c", or "cq"')
+    if args.use_exact not in (False, 'c', 'cq'):
+        raise ValueError(f'Unrecognized option for EM use: "{args.use_exact}" - pick "False", "c", or "cq"')
+
+    # Error handling for optimizer
+    if args.optimizer not in ('Adadelta', 'Adamax'):
+        raise ValueError(f'Unrecognized optimizer: "{args.optimizer}" - pick "Adadelta" or "Adamax"')
