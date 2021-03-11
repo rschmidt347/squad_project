@@ -160,8 +160,12 @@ def get_train_args():
     else:
         raise ValueError(f'Unrecognized metric name: "{args.metric_name}"')
 
-    # Check for errors in new hyperparameters
+    # Check RNN type and context/question features
     train_test_error_checker(args)
+    
+    # Error handling for optimizer
+    if args.model_optimizer not in ('Adadelta', 'Adamax'):
+        raise ValueError(f'Unrecognized optimizer: "{args.model_optimizer}" - pick "Adadelta" or "Adamax"')
 
     return args
 
@@ -406,7 +410,3 @@ def train_test_error_checker(args):
         raise ValueError(f'Unrecognized option for token use: "{args.use_token}" - pick "False", "c", or "cq"')
     if args.use_exact not in (False, 'c', 'cq'):
         raise ValueError(f'Unrecognized option for EM use: "{args.use_exact}" - pick "False", "c", or "cq"')
-
-    # Error handling for optimizer
-    if args.model_optimizer not in ('Adadelta', 'Adamax'):
-        raise ValueError(f'Unrecognized optimizer: "{args.model_optimizer}" - pick "Adadelta" or "Adamax"')
