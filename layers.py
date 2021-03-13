@@ -108,7 +108,7 @@ class TokenEncoder(nn.Module):
             # Initially x has dim (batch_size, seq_len)
             batch_size, seq_len = x.shape
             x_ = torch.unsqueeze(x, 2)  # (batch_size, seq_len, 1)
-            emb = torch.FloatTensor(batch_size, seq_len, self.num_tags).zero_().to(x.device)
+            emb = torch.cuda.FloatTensor(batch_size, seq_len, self.num_tags).zero_()
             # assert(emb.shape == (batch_size, seq_len, self.num_tags))
             emb.scatter_(2, x_, 1)
             # assert(emb.shape == (batch_size, seq_len, self.num_tags))
