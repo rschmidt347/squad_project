@@ -107,8 +107,10 @@ class TokenEncoder(nn.Module):
         elif self.token_one_hot:
             # Initially x has dim (batch_size, seq_len)
             batch_size, seq_len = x.shape
+            print(batch_size, seq_len)
             print(x.shape)
             emb = torch.cuda.FloatTensor(batch_size, seq_len, self.num_tags).zero_()
+            print(emb.shape)
             assert(emb.shape == (batch_size, seq_len, self.num_tags))
             # assert(emb.shape == (batch_size, seq_len, self.num_tags))
             for i in range(batch_size):
