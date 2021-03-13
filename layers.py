@@ -91,23 +91,22 @@ class TokenEncoder(nn.Module):
         embed_size (int): Size of embeddings.
         drop_prob (float): Probability of zero-ing out activations.
     """
-    def __init__(self, num_tags, embed_size=5, drop_prob=0.,
-                 use_embed=False, token_one_hot=False):
+    def __init__(self, num_tags, embed_size=0, drop_prob=0., token_one_hot=False):
         super(TokenEncoder, self).__init__()
         self.num_tags = num_tags
-        self.use_embed = use_embed
+        self.embed_size = embed_size
         self.token_one_hot = token_one_hot
-        if self.use_embed:
+        if self.embed_size > 0:
             self.drop_prob = drop_prob
             self.embed = nn.Embedding(num_tags, embed_size)
 
     def forward(self, x):
-        if self.use_embed:
+        if self.embed_size > 0:
             emb = self.embed(x)     # (batch_size, seq_len, embed_size)
             emb = F.dropout(emb, self.drop_prob, self.training)
         elif self.token_one_hot:
             # Initially x has dim (batch_size, seq_len)
-            batch_size, seq_len = x.shape()
+            batch_size, seq_len = x.shape
             x = torch.unsqueeze(x, 2)  # (batch_size, seq_len, 1)
             x = x.long()
             assert(x.shape == (batch_size, seq_len, 1))

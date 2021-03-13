@@ -68,10 +68,12 @@ class BiDAF(nn.Module):
         if self.use_token:
             if token_embed_size > 0:
                 # If embedding size specified, embed the tokens
-                self.enc_ner = layers.TokenEncoder(num_tags=num_ner_tags, embed_size=token_embed_size,
-                                                   drop_prob=drop_prob, use_embed=True)
-                self.enc_pos = layers.TokenEncoder(num_tags=num_pos_tags, embed_size=token_embed_size,
-                                                   drop_prob=drop_prob, use_embed=True)
+                self.enc_ner = layers.TokenEncoder(num_tags=num_ner_tags,
+                                                   embed_size=token_embed_size,
+                                                   drop_prob=drop_prob)
+                self.enc_pos = layers.TokenEncoder(num_tags=num_pos_tags,
+                                                   embed_size=token_embed_size,
+                                                   drop_prob=drop_prob)
                 final_doc_hidden_size += 2 * token_embed_size
             elif token_one_hot:
                 # If one hot flag, convert raw token indices to one-hot & append
