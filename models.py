@@ -151,7 +151,7 @@ class BiDAF(nn.Module):
                 ner_idxs = torch.unsqueeze(ner_idxs, dim=2).float()  # -> (batch_size, c_len, 1)
                 pos_idxs = torch.unsqueeze(pos_idxs, dim=2).float()  # -> (batch_size, c_len, 1)
             c_emb = torch.cat([c_emb, ner_idxs, pos_idxs], dim=2)
-            # -> final output: (batch_size, c_len, final_doc_hidden_size += <token dims>)
+            # -> final output: (batch_size, c_len, final_doc_hidden_size)
             if self.context_and_question:
                 if self.token_one_hot:
                     qner_idxs = self.enc_ner(qner_idxs).float()  # (batch_size, q_len, num_ner_tags)
@@ -160,7 +160,7 @@ class BiDAF(nn.Module):
                     qner_idxs = torch.unsqueeze(qner_idxs, dim=2).float()  # -> (batch_size, q_len, 1)
                     qpos_idxs = torch.unsqueeze(qpos_idxs, dim=2).float()  # -> (batch_size, q_len, 1)
                 q_emb = torch.cat([q_emb, qner_idxs, qpos_idxs], dim=2)
-                # -> final output: (batch_size, q_len, final_doc_hidden_size += {2, 2 * token_embed_size})
+                # -> final output: (batch_size, q_len, final_doc_hidden_size)
 
         if self.use_exact:
             # exact_{orig, uncased, lemma} all have dimensions: (batch_size, c_len)
@@ -168,13 +168,13 @@ class BiDAF(nn.Module):
             exact_uncased = torch.unsqueeze(exact_uncased, dim=2).float()  # -> (batch_size, c_len, 1)
             exact_lemma = torch.unsqueeze(exact_lemma, dim=2).float()  # -> (batch_size, c_len, 1)
             c_emb = torch.cat([c_emb, exact_orig, exact_uncased, exact_lemma], dim=2)
-            # -> final output: (batch_size, c_len, final_doc_hidden_size += 3)
+            # -> final output: (batch_size, c_len, final_doc_hidden_size)
             if self.context_and_question:
                 qexact_orig = torch.unsqueeze(qexact_orig, dim=2).float()  # -> (batch_size, q_len, 1)
                 qexact_uncased = torch.unsqueeze(qexact_uncased, dim=2).float()  # -> (batch_size, q_len, 1)
                 qexact_lemma = torch.unsqueeze(qexact_lemma, dim=2).float()  # -> (batch_size, q_len, 1)
                 q_emb = torch.cat([q_emb, qexact_orig, qexact_uncased, qexact_lemma], dim=2)
-                # -> final_output: (batch_size, q_len, final_doc_hidden_size += 3)
+                # -> final_output: (batch_size, q_len, final_doc_hidden_size)
 
         # Project context/question embeddings from final_doc_hidden_size -> final_hidden_size
         if self.use_projection:
