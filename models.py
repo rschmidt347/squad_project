@@ -187,10 +187,6 @@ class BiDAF(nn.Module):
         c_emb = self.hwy(c_emb)  # (batch_size, c_len, final_hidden_size)
         q_emb = self.hwy(q_emb)  # (batch_size, q_len, final_hidden_size)
 
-        print(f"c_emb size: {c_emb.shape}")
-        print(f"q_emb size: {q_emb.shape}")
-        print(self.final_hidden_size)
-
         q_enc = self.enc(q_emb, q_len)  # (batch_size, q_len, 2 * final_hidden_size)
         c_enc = self.enc(c_emb, c_len)    # (batch_size, c_len, 2 * final_hidden_size)
 

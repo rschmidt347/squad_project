@@ -113,11 +113,11 @@ class TokenEncoder(nn.Module):
             emb.scatter_(2, x_, 1)
             assert (emb.shape == (batch_size, seq_len, self.num_tags))
             """
+            Crusty for loop version
             for i in range(batch_size):
                 for j in range(seq_len):
                     emb[i, j, x[i, j]] = 1
             """
-
             # assert(emb.shape == (batch_size, seq_len, self.num_tags))
             # -> (batch_size, seq_len, num_tags)
 
