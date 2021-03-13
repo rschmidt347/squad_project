@@ -63,7 +63,8 @@ def main(args):
                   use_exact=exact_flag,
                   context_and_question=context_and_question_flag,
                   token_embed_size=args.token_embed_size,
-                  use_projection=args.use_projection)
+                  use_projection=args.use_projection,
+                  token_one_hot=args.token_one_hot)
 
     model = nn.DataParallel(model, gpu_ids)
     log.info(f'Loading checkpoint from {args.load_path}...')

@@ -37,7 +37,7 @@ class BiDAF(nn.Module):
     def __init__(self, word_vectors, hidden_size,
                  drop_prob=0., rnn_type='LSTM', num_mod_layers=2, char_vectors=None,
                  use_token=False, use_exact=False, context_and_question=False,
-                 token_embed_size=0, use_projection=False,
+                 token_embed_size=0, use_projection=False, token_one_hot=False,
                  num_ner_tags=52, num_pos_tags=21):
         super(BiDAF, self).__init__()
         # 0) Use character embeddings if fed into the BiDAF model
@@ -63,6 +63,7 @@ class BiDAF(nn.Module):
         # - Keep track of new hidden size if adding tagged features
         final_doc_hidden_size = final_hidden_size
         self.use_token = use_token
+        self.token_one_hot = token_one_hot
         # 3 a) Token features: POS, NER
         if self.use_token:
             if token_embed_size > 0:
@@ -72,6 +73,11 @@ class BiDAF(nn.Module):
                 self.enc_pos = layers.TokenEncoder(num_tags=num_pos_tags, embed_size=token_embed_size,
                                                    drop_prob=drop_prob, use_embed=True)
                 final_doc_hidden_size += 2 * token_embed_size
+            elif token_one_hot:
+                # If one hot flag, convert raw token indices to one-hot & append
+                self.enc_ner = layers.TokenEncoder(num_tags=num_ner_tags, token_one_hot=True)
+                self.enc_pos = layers.TokenEncoder(num_tags=num_pos_tags, token_one_hot=True)
+                final_doc_hidden_size += num_ner_tags + num_ner_tags
             else:
                 # No embedding, simply append the index for ner, pos, (resp. qner, qpos)
                 final_doc_hidden_size += 2
@@ -133,13 +139,21 @@ class BiDAF(nn.Module):
 
         if self.use_token:
             # NER, POS indices: (batch_size, c_len)
-            ner_idxs = torch.unsqueeze(ner_idxs, dim=2).float()  # -> (batch_size, c_len, 1)
-            pos_idxs = torch.unsqueeze(pos_idxs, dim=2).float()  # -> (batch_size, c_len, 1)
+            if self.token_one_hot:
+                ner_idxs = self.enc_ner(ner_idxs)  # (batch_size, c_len, num_ner_tags)
+                pos_idxs = self.enc_pos(pos_idxs)  # (batch_size, c_len, num_pos_tags)
+            else:
+                ner_idxs = torch.unsqueeze(ner_idxs, dim=2).float()  # -> (batch_size, c_len, 1)
+                pos_idxs = torch.unsqueeze(pos_idxs, dim=2).float()  # -> (batch_size, c_len, 1)
             c_emb = torch.cat([c_emb, ner_idxs, pos_idxs], dim=2)
-            # -> final output: (batch_size, c_len, final_doc_hidden_size += {2, 2 * token_embed_size})
+            # -> final output: (batch_size, c_len, final_doc_hidden_size += <token dims>)
             if self.context_and_question:
-                qner_idxs = torch.unsqueeze(qner_idxs, dim=2).float()  # -> (batch_size, q_len, 1)
-                qpos_idxs = torch.unsqueeze(qpos_idxs, dim=2).float()  # -> (batch_size, q_len, 1)
+                if self.token_one_hot:
+                    qner_idxs = self.enc_ner(qner_idxs)  # (batch_size, q_len, num_ner_tags)
+                    qpos_idxs = self.pos_ner(qpos_idxs)  # (batch_size, q_len, num_pos_tags)
+                else:
+                    qner_idxs = torch.unsqueeze(qner_idxs, dim=2).float()  # -> (batch_size, q_len, 1)
+                    qpos_idxs = torch.unsqueeze(qpos_idxs, dim=2).float()  # -> (batch_size, q_len, 1)
                 q_emb = torch.cat([q_emb, qner_idxs, qpos_idxs], dim=2)
                 # -> final output: (batch_size, q_len, final_doc_hidden_size += {2, 2 * token_embed_size})
 
