@@ -107,11 +107,14 @@ class TokenEncoder(nn.Module):
             emb = F.dropout(emb, self.drop_prob, self.training)
         elif self.token_one_hot:
             # Initially x has dim (batch_size, seq_len)
-            batch_size, seq_len = x.shape
-            x = x.long()
+            batch_size, seq_len = x.shape()
             x = torch.unsqueeze(x, 2)  # (batch_size, seq_len, 1)
-            emb = torch.zeros(batch_size, seq_len, self.num_tags, device=x.device).scatter_(2, x, 1)
-            assert(emb.size == (batch_size, seq_len, self.num_tags))
+            x = x.long()
+            assert(x.shape == (batch_size, seq_len, 1))
+            emb = torch.zeros(batch_size, seq_len, self.num_tags).to(x.device)
+            assert(emb.shape == (batch_size, seq_len, self.num_tags))
+            emb = emb.scatter_(2, x, 1)
+            assert(emb.shape == (batch_size, seq_len, self.num_tags))
             # -> (batch_size, seq_len, num_tags)
 
         return emb
