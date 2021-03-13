@@ -96,7 +96,7 @@ class TokenEncoder(nn.Module):
         super(TokenEncoder, self).__init__()
         self.num_tags = num_tags
         self.use_embed = use_embed
-        self.to_one_hot = to_one_hot
+        self.token_one_hot = token_one_hot
         if self.use_embed:
             self.drop_prob = drop_prob
             self.embed = nn.Embedding(num_tags, embed_size)
