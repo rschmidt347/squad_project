@@ -75,15 +75,12 @@ class BiDAF(nn.Module):
                                                    embed_size=token_embed_size,
                                                    drop_prob=drop_prob)
                 final_doc_hidden_size += 2 * token_embed_size
-                print(final_doc_hidden_size)
             elif token_one_hot:
                 # If one hot flag, convert raw token indices to one-hot & append
                 self.enc_ner = layers.TokenEncoder(num_tags=num_ner_tags, token_one_hot=True)
                 self.enc_pos = layers.TokenEncoder(num_tags=num_pos_tags, token_one_hot=True)
                 final_doc_hidden_size += num_ner_tags
-                print(final_doc_hidden_size)
                 final_doc_hidden_size += num_pos_tags
-                print(final_doc_hidden_size)
             else:
                 # No embedding, simply append the index for ner, pos, (resp. qner, qpos)
                 final_doc_hidden_size += 2
@@ -92,7 +89,6 @@ class BiDAF(nn.Module):
         if self.use_exact:
             # Concatenate 3 binary features to each vector
             final_doc_hidden_size += 3
-            print(final_doc_hidden_size)
         # 3 c) Flag for whether features are in context and/or question
         self.context_and_question = context_and_question
 
@@ -140,16 +136,12 @@ class BiDAF(nn.Module):
         c_emb = self.emb(cw_idxs)  # (batch_size, c_len, hidden_size)
         q_emb = self.emb(qw_idxs)  # (batch_size, q_len, hidden_size)
 
-        print(f"c_emb shape: {c_emb.shape}")
-        print(f"q_emb shape: {q_emb.shape}")
         if self.use_char_embeddings:
             cc_emb = self.char_emb(cc_idxs)  # (batch_size, c_len, hidden_size)
             c_emb = torch.cat([c_emb, cc_emb], dim=2)  # (batch_size, c_len, final_doc_hidden_size = 2*hidden_size)
             qc_emb = self.char_emb(qc_idxs)  # (batch_size, q_len, hidden_size)
             q_emb = torch.cat([q_emb, qc_emb], dim=2)  # (batch_size, q_len, final_doc_hidden_size = 2*hidden_size)
 
-        print(f"c_emb shape: {c_emb.shape}")
-        print(f"q_emb shape: {q_emb.shape}")
         if self.use_token:
             # NER, POS indices: (batch_size, c_len)
             if self.token_one_hot:
@@ -192,13 +184,12 @@ class BiDAF(nn.Module):
                     q_emb = self.project(q_emb)  # (batch_size, q_len, final_hidden_size)
         # else: let final_hidden_size = final_doc_hidden_size
 
-        print(f"c_emb shape: {c_emb.shape}")
-        print(f"q_emb shape: {q_emb.shape}")
-        print(f"final hidden size: {self.final_hidden_size}")
-        assert(c_emb.shape[2] == self.final_hidden_size)
-        assert(q_emb.shape[2] == self.final_hidden_size)
         c_emb = self.hwy(c_emb)  # (batch_size, c_len, final_hidden_size)
         q_emb = self.hwy(q_emb)  # (batch_size, q_len, final_hidden_size)
+
+        print(f"c_emb size: {c_emb.shape}")
+        print(f"q_emb size: {q_emb.shape}")
+        print(self.final_hidden_size)
 
         q_enc = self.enc(q_emb, q_len)  # (batch_size, q_len, 2 * final_hidden_size)
         c_enc = self.enc(c_emb, c_len)    # (batch_size, c_len, 2 * final_hidden_size)
