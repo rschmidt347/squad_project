@@ -115,7 +115,6 @@ class TokenEncoder(nn.Module):
             # assert(emb.shape == (batch_size, seq_len, self.num_tags))
             for i in range(batch_size):
                 for j in range(seq_len):
-                    print(x[i, j])
                     emb[i, j, x[i, j]] = 1
             # assert(emb.shape == (batch_size, seq_len, self.num_tags))
             # -> (batch_size, seq_len, num_tags)
