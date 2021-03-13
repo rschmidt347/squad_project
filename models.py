@@ -140,8 +140,8 @@ class BiDAF(nn.Module):
         if self.use_token:
             # NER, POS indices: (batch_size, c_len)
             if self.token_one_hot:
-                ner_idxs = self.enc_ner(ner_idxs)  # (batch_size, c_len, num_ner_tags)
-                pos_idxs = self.enc_pos(pos_idxs)  # (batch_size, c_len, num_pos_tags)
+                ner_idxs = self.enc_ner(ner_idxs).float()  # (batch_size, c_len, num_ner_tags)
+                pos_idxs = self.enc_pos(pos_idxs).float()  # (batch_size, c_len, num_pos_tags)
             else:
                 ner_idxs = torch.unsqueeze(ner_idxs, dim=2).float()  # -> (batch_size, c_len, 1)
                 pos_idxs = torch.unsqueeze(pos_idxs, dim=2).float()  # -> (batch_size, c_len, 1)
@@ -149,8 +149,8 @@ class BiDAF(nn.Module):
             # -> final output: (batch_size, c_len, final_doc_hidden_size += <token dims>)
             if self.context_and_question:
                 if self.token_one_hot:
-                    qner_idxs = self.enc_ner(qner_idxs)  # (batch_size, q_len, num_ner_tags)
-                    qpos_idxs = self.enc_pos(qpos_idxs)  # (batch_size, q_len, num_pos_tags)
+                    qner_idxs = self.enc_ner(qner_idxs).float()  # (batch_size, q_len, num_ner_tags)
+                    qpos_idxs = self.enc_pos(qpos_idxs).float()  # (batch_size, q_len, num_pos_tags)
                 else:
                     qner_idxs = torch.unsqueeze(qner_idxs, dim=2).float()  # -> (batch_size, q_len, 1)
                     qpos_idxs = torch.unsqueeze(qpos_idxs, dim=2).float()  # -> (batch_size, q_len, 1)

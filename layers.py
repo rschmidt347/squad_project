@@ -111,6 +111,7 @@ class TokenEncoder(nn.Module):
             x = x.long()
             x = torch.unsqueeze(x, 2)  # (batch_size, seq_len, 1)
             emb = torch.zeros(batch_size, seq_len, self.num_tags, device=x.device).scatter_(2, x, 1)
+            assert(emb.size == (batch_size, seq_len, self.num_tags))
             # -> (batch_size, seq_len, num_tags)
 
         return emb
