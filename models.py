@@ -98,6 +98,8 @@ class BiDAF(nn.Module):
         else:
             final_hidden_size = final_doc_hidden_size
 
+        self.final_hidden_size = final_hidden_size
+
         # 5) Highway Layer now outside of the Embedding layer...
         # - Allows concatenated word+char vector to be fed into Highway Layer if needed
         self.hwy = layers.HighwayEncoder(num_layers=2,
@@ -147,8 +149,6 @@ class BiDAF(nn.Module):
             else:
                 ner_idxs = torch.unsqueeze(ner_idxs, dim=2).float()  # -> (batch_size, c_len, 1)
                 pos_idxs = torch.unsqueeze(pos_idxs, dim=2).float()  # -> (batch_size, c_len, 1)
-            print("C-NER size: " + str(ner_idxs.shape))
-            print("C-POS size: " + str(pos_idxs.shape))
             c_emb = torch.cat([c_emb, ner_idxs, pos_idxs], dim=2)
             # -> final output: (batch_size, c_len, final_doc_hidden_size += <token dims>)
             if self.context_and_question:
@@ -158,8 +158,6 @@ class BiDAF(nn.Module):
                 else:
                     qner_idxs = torch.unsqueeze(qner_idxs, dim=2).float()  # -> (batch_size, q_len, 1)
                     qpos_idxs = torch.unsqueeze(qpos_idxs, dim=2).float()  # -> (batch_size, q_len, 1)
-                print("Q-NER size: " + str(qner_idxs.shape))
-                print("Q-POS size: " + str(qpos_idxs.shape))
                 q_emb = torch.cat([q_emb, qner_idxs, qpos_idxs], dim=2)
                 # -> final output: (batch_size, q_len, final_doc_hidden_size += {2, 2 * token_embed_size})
 
@@ -185,6 +183,8 @@ class BiDAF(nn.Module):
                     q_emb = self.project(q_emb)  # (batch_size, q_len, final_hidden_size)
         # else: let final_hidden_size = final_doc_hidden_size
 
+        assert(c_emb.shape[2] == self.final_hidden_size)
+        assert(q_emb.shape[2] == self.final_hidden_size)
         c_emb = self.hwy(c_emb)  # (batch_size, c_len, final_hidden_size)
         q_emb = self.hwy(q_emb)  # (batch_size, q_len, final_hidden_size)
 
