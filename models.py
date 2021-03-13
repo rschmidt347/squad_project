@@ -150,7 +150,7 @@ class BiDAF(nn.Module):
             if self.context_and_question:
                 if self.token_one_hot:
                     qner_idxs = self.enc_ner(qner_idxs)  # (batch_size, q_len, num_ner_tags)
-                    qpos_idxs = self.pos_ner(qpos_idxs)  # (batch_size, q_len, num_pos_tags)
+                    qpos_idxs = self.enc_pos(qpos_idxs)  # (batch_size, q_len, num_pos_tags)
                 else:
                     qner_idxs = torch.unsqueeze(qner_idxs, dim=2).float()  # -> (batch_size, q_len, 1)
                     qpos_idxs = torch.unsqueeze(qpos_idxs, dim=2).float()  # -> (batch_size, q_len, 1)
