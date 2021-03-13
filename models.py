@@ -38,7 +38,7 @@ class BiDAF(nn.Module):
                  drop_prob=0., rnn_type='LSTM', num_mod_layers=2, char_vectors=None,
                  use_token=False, use_exact=False, context_and_question=False,
                  token_embed_size=0, use_projection=False, token_one_hot=False,
-                 num_ner_tags=52, num_pos_tags=21):
+                 num_ner_tags=21, num_pos_tags=52):
         super(BiDAF, self).__init__()
         # 0) Use character embeddings if fed into the BiDAF model
         self.use_char_embeddings = True if char_vectors is not None else False
