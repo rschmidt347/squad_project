@@ -189,6 +189,7 @@ class BiDAF(nn.Module):
 
         print(f"c_emb shape: {c_emb.shape}")
         print(f"q_emb shape: {q_emb.shape}")
+        print(f"final hidden size: {self.final_hidden_size}")
         assert(c_emb.shape[2] == self.final_hidden_size)
         assert(q_emb.shape[2] == self.final_hidden_size)
         c_emb = self.hwy(c_emb)  # (batch_size, c_len, final_hidden_size)
