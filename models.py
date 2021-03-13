@@ -75,11 +75,15 @@ class BiDAF(nn.Module):
                                                    embed_size=token_embed_size,
                                                    drop_prob=drop_prob)
                 final_doc_hidden_size += 2 * token_embed_size
+                print(final_doc_hidden_size)
             elif token_one_hot:
                 # If one hot flag, convert raw token indices to one-hot & append
                 self.enc_ner = layers.TokenEncoder(num_tags=num_ner_tags, token_one_hot=True)
                 self.enc_pos = layers.TokenEncoder(num_tags=num_pos_tags, token_one_hot=True)
-                final_doc_hidden_size += num_ner_tags + num_ner_tags
+                final_doc_hidden_size += num_ner_tags
+                print(final_doc_hidden_size)
+                final_doc_hidden_size += num_pos_tags
+                print(final_doc_hidden_size)
             else:
                 # No embedding, simply append the index for ner, pos, (resp. qner, qpos)
                 final_doc_hidden_size += 2
@@ -88,6 +92,7 @@ class BiDAF(nn.Module):
         if self.use_exact:
             # Concatenate 3 binary features to each vector
             final_doc_hidden_size += 3
+            print(final_doc_hidden_size)
         # 3 c) Flag for whether features are in context and/or question
         self.context_and_question = context_and_question
 
