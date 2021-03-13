@@ -135,12 +135,16 @@ class BiDAF(nn.Module):
         c_emb = self.emb(cw_idxs)  # (batch_size, c_len, hidden_size)
         q_emb = self.emb(qw_idxs)  # (batch_size, q_len, hidden_size)
 
+        print(f"c_emb shape: {c_emb.shape}")
+        print(f"q_emb shape: {q_emb.shape}")
         if self.use_char_embeddings:
             cc_emb = self.char_emb(cc_idxs)  # (batch_size, c_len, hidden_size)
             c_emb = torch.cat([c_emb, cc_emb], dim=2)  # (batch_size, c_len, final_doc_hidden_size = 2*hidden_size)
             qc_emb = self.char_emb(qc_idxs)  # (batch_size, q_len, hidden_size)
             q_emb = torch.cat([q_emb, qc_emb], dim=2)  # (batch_size, q_len, final_doc_hidden_size = 2*hidden_size)
 
+        print(f"c_emb shape: {c_emb.shape}")
+        print(f"q_emb shape: {q_emb.shape}")
         if self.use_token:
             # NER, POS indices: (batch_size, c_len)
             if self.token_one_hot:
@@ -183,6 +187,8 @@ class BiDAF(nn.Module):
                     q_emb = self.project(q_emb)  # (batch_size, q_len, final_hidden_size)
         # else: let final_hidden_size = final_doc_hidden_size
 
+        print(f"c_emb shape: {c_emb.shape}")
+        print(f"q_emb shape: {q_emb.shape}")
         assert(c_emb.shape[2] == self.final_hidden_size)
         assert(q_emb.shape[2] == self.final_hidden_size)
         c_emb = self.hwy(c_emb)  # (batch_size, c_len, final_hidden_size)
