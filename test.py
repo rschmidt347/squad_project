@@ -53,6 +53,19 @@ def main(args):
     # Switch over to proper data files if none specified
     if args.use_default_task_files:
         args, log = switch_to_default_files(args, log)
+    # Log projection information based on args
+    if args.use_projection:
+        if args.use_token:
+            if args.token_one_hot:
+                log.info("Projection enabled with one-hot tokens.")
+                log.info("Projection will be performed on token features separately from word embeddings.")
+                log.info(f"Projecting features to dimension: {args.ff_hidden_size}...")
+            else:
+                log.info("Projection enabled with raw index tokens.")
+                log.info("Projection will be performed jointly on feature + word vector...")
+        else:
+            log.info("Token features are not in use and projection is enabled for some reason.")
+            log.info("I don't imagine that this will yield meaningful results...")
 
     model = BiDAF(word_vectors=word_vectors,
                   char_vectors=char_vectors if args.use_char_embeddings else None,
@@ -64,7 +77,8 @@ def main(args):
                   context_and_question=context_and_question_flag,
                   token_embed_size=args.token_embed_size,
                   use_projection=args.use_projection,
-                  token_one_hot=args.token_one_hot)
+                  token_one_hot=args.token_one_hot,
+                  final_feature_hidden_size=args.ff_hidden_size)
 
     model = nn.DataParallel(model, gpu_ids)
     log.info(f'Loading checkpoint from {args.load_path}...')
