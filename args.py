@@ -402,6 +402,11 @@ def add_train_test_args(parser):
                         type=bool,
                         default=False,
                         help='Whether to append raw token index or convert to one-hot if using tokens.')
+    # - Flag for final feature hidden size if project one-hot vectors
+    parser.add_argument('--ff_hidden_size',
+                        type=int,
+                        default=50,
+                        help='Final feature hidden size if projecting one-hot feature vectors.')
 
 
 def train_test_error_checker(args):

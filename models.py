@@ -38,7 +38,7 @@ class BiDAF(nn.Module):
                  drop_prob=0., rnn_type='LSTM', num_mod_layers=2, char_vectors=None,
                  use_token=False, use_exact=False, context_and_question=False,
                  token_embed_size=0, use_projection=False, token_one_hot=False,
-                 num_ner_tags=21, num_pos_tags=52):
+                 final_feature_hidden_size=50, num_ner_tags=21, num_pos_tags=52):
         super(BiDAF, self).__init__()
         # 0) Use character embeddings if fed into the BiDAF model
         self.use_char_embeddings = True if char_vectors is not None else False
@@ -60,11 +60,15 @@ class BiDAF(nn.Module):
             final_hidden_size += hidden_size  # since char_out_size = hidden_size
 
         # 3) Now, account for tagged features if needed
-        # - Keep track of new hidden size if adding tagged features
-        final_doc_hidden_size = final_hidden_size
+        # 3 a) Keep track of indices
+        # - Add new index to keep track of total accumulated feature size
+        total_feature_size = 0
+        # - Flag for token usage
         self.use_token = use_token
+        # - Flag for if one-hot encoding the tokens
         self.token_one_hot = token_one_hot
-        # 3 a) Token features: POS, NER
+
+        # 3 b) Token features: POS, NER
         if self.use_token:
             if token_embed_size > 0:
                 # If embedding size specified, embed the tokens
@@ -74,32 +78,46 @@ class BiDAF(nn.Module):
                 self.enc_pos = layers.TokenEncoder(num_tags=num_pos_tags,
                                                    embed_size=token_embed_size,
                                                    drop_prob=drop_prob)
-                final_doc_hidden_size += 2 * token_embed_size
-            elif token_one_hot:
+                total_feature_size += 2 * token_embed_size
+            elif self.token_one_hot:
                 # If one hot flag, convert raw token indices to one-hot & append
                 self.enc_ner = layers.TokenEncoder(num_tags=num_ner_tags, token_one_hot=True)
                 self.enc_pos = layers.TokenEncoder(num_tags=num_pos_tags, token_one_hot=True)
-                final_doc_hidden_size += num_ner_tags
-                final_doc_hidden_size += num_pos_tags
+                total_feature_size += num_ner_tags
+                total_feature_size += num_pos_tags
             else:
                 # No embedding, simply append the index for ner, pos, (resp. qner, qpos)
-                final_doc_hidden_size += 2
-        # 3 b) Exact match features: original match, uncased match, lemma match
+                total_feature_size += 2
+
+        # 3 c) Exact match features: original match, uncased match, lemma match
         self.use_exact = use_exact
         if self.use_exact:
             # Concatenate 3 binary features to each vector
-            final_doc_hidden_size += 3
-        # 3 c) Flag for whether features are in context and/or question
+            total_feature_size += 3
+
+        # 3 d) Flag for whether features are in context and/or question
         self.context_and_question = context_and_question
 
         # 4) Projection layer to decrease dimensions if extra features used
         self.use_projection = use_projection
         if self.use_projection:
-            self.project = nn.Linear(final_doc_hidden_size, final_hidden_size, bias=False)
+            # If projection, check for one-hot or not
+            if self.token_one_hot:
+                # If one-hot, project only the features
+                self.project = layers.FeatureProjector(input_size=total_feature_size,
+                                                       hidden_size=final_feature_hidden_size,
+                                                       drop_prob=drop_prob)
+                # Final hidden size increased by projection dimension
+                final_hidden_size += final_feature_hidden_size
+            else:
+                # If raw features appended, project the combined vector
+                self.project = nn.Linear(final_hidden_size + total_feature_size,
+                                         final_hidden_size,
+                                         bias=False)
+                # Final hidden size unchanged since projected down to match word+char level
         else:
-            final_hidden_size = final_doc_hidden_size
-
-        self.final_hidden_size = final_hidden_size
+            # If not projection, just append the features
+            final_hidden_size += total_feature_size
 
         # 5) Highway Layer now outside of the Embedding layer...
         # - Allows concatenated word+char vector to be fed into Highway Layer if needed
@@ -142,6 +160,8 @@ class BiDAF(nn.Module):
             qc_emb = self.char_emb(qc_idxs)  # (batch_size, q_len, hidden_size)
             q_emb = torch.cat([q_emb, qc_emb], dim=2)  # (batch_size, q_len, final_doc_hidden_size = 2*hidden_size)
 
+        # As of now, x_emb vectors contain word and/or char embeddings only
+        # Now, start working on feature vectors: x_feat
         if self.use_token:
             # NER, POS indices: (batch_size, c_len)
             if self.token_one_hot:
@@ -150,8 +170,8 @@ class BiDAF(nn.Module):
             else:
                 ner_idxs = torch.unsqueeze(ner_idxs, dim=2).float()  # -> (batch_size, c_len, 1)
                 pos_idxs = torch.unsqueeze(pos_idxs, dim=2).float()  # -> (batch_size, c_len, 1)
-            c_emb = torch.cat([c_emb, ner_idxs, pos_idxs], dim=2)
-            # -> final output: (batch_size, c_len, final_doc_hidden_size)
+            c_feat = torch.cat([ner_idxs, pos_idxs], dim=2)
+            # -> final output: (batch_size, c_len, <token_size>)
             if self.context_and_question:
                 if self.token_one_hot:
                     qner_idxs = self.enc_ner(qner_idxs).float()  # (batch_size, q_len, num_ner_tags)
@@ -159,30 +179,51 @@ class BiDAF(nn.Module):
                 else:
                     qner_idxs = torch.unsqueeze(qner_idxs, dim=2).float()  # -> (batch_size, q_len, 1)
                     qpos_idxs = torch.unsqueeze(qpos_idxs, dim=2).float()  # -> (batch_size, q_len, 1)
-                q_emb = torch.cat([q_emb, qner_idxs, qpos_idxs], dim=2)
-                # -> final output: (batch_size, q_len, final_doc_hidden_size)
+                q_feat = torch.cat([qner_idxs, qpos_idxs], dim=2)
+                # -> final output: (batch_size, q_len, <token_size>)
 
         if self.use_exact:
             # exact_{orig, uncased, lemma} all have dimensions: (batch_size, c_len)
             exact_orig = torch.unsqueeze(exact_orig, dim=2).float()  # -> (batch_size, c_len, 1)
             exact_uncased = torch.unsqueeze(exact_uncased, dim=2).float()  # -> (batch_size, c_len, 1)
             exact_lemma = torch.unsqueeze(exact_lemma, dim=2).float()  # -> (batch_size, c_len, 1)
-            c_emb = torch.cat([c_emb, exact_orig, exact_uncased, exact_lemma], dim=2)
-            # -> final output: (batch_size, c_len, final_doc_hidden_size)
+            if self.use_token:
+                c_feat = torch.cat([c_feat, exact_orig, exact_uncased, exact_lemma], dim=2)
+                # -> (batch_size, c_len, <token_size> + 3)
+            else:
+                c_feat = torch.cat([exact_orig, exact_uncased, exact_lemma], dim=2)
+                # -> (batch_size, c_len, 3)
             if self.context_and_question:
                 qexact_orig = torch.unsqueeze(qexact_orig, dim=2).float()  # -> (batch_size, q_len, 1)
                 qexact_uncased = torch.unsqueeze(qexact_uncased, dim=2).float()  # -> (batch_size, q_len, 1)
                 qexact_lemma = torch.unsqueeze(qexact_lemma, dim=2).float()  # -> (batch_size, q_len, 1)
-                q_emb = torch.cat([q_emb, qexact_orig, qexact_uncased, qexact_lemma], dim=2)
-                # -> final_output: (batch_size, q_len, final_doc_hidden_size)
+                if self.use_token:
+                    q_feat = torch.cat([q_feat, qexact_orig, qexact_uncased, qexact_lemma], dim=2)
+                    # -> (batch_size, q_len, <token_size> + 3)
+                else:
+                    q_feat = torch.cat([qexact_orig, qexact_uncased, qexact_lemma], dim=2)
+                    # -> (batch_size, q_len, 3)
 
-        # Project context/question embeddings from final_doc_hidden_size -> final_hidden_size
-        if self.use_projection:
-            if self.use_exact or self.use_token:
-                c_emb = self.project(c_emb)  # (batch_size, c_len, final_hidden_size)
-                if self.context_and_question:
-                    q_emb = self.project(q_emb)  # (batch_size, q_len, final_hidden_size)
-        # else: let final_hidden_size = final_doc_hidden_size
+        # Concatenate features as specified by model args
+        if self.use_exact or self.use_token:
+            if self.use_projection:
+                if self.token_one_hot:
+                    # If projecting one-hot features, project features before concat
+                    c_feat = self.project(c_feat)
+                    q_feat = self.project(q_feat)
+                    c_emb = torch.concat([c_emb, c_feat], dim=2)
+                    q_emb = torch.concat([q_emb, q_feat], dim=2)
+                else:
+                    # If projecting raw index features, project features after concat
+                    c_emb = torch.concat([c_emb, c_feat], dim=2)
+                    q_emb = torch.concat([q_emb, q_feat], dim=2)
+                    c_emb = self.project(c_emb)
+                    q_emb = self.project(q_emb)
+            else:
+                # If no projection, just concat and move on
+                c_emb = torch.concat([c_emb, c_feat], dim=2)
+                q_emb = torch.concat([q_emb, q_feat], dim=2)
+            # -> final output: (batch_size, x_len, final_hidden_size)
 
         c_emb = self.hwy(c_emb)  # (batch_size, c_len, final_hidden_size)
         q_emb = self.hwy(q_emb)  # (batch_size, q_len, final_hidden_size)

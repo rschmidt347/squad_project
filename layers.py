@@ -85,11 +85,15 @@ class CharEmbedding(nn.Module):
 
 
 class TokenEncoder(nn.Module):
-    """Embedding layer used by BiDAF, for token features (NER, POS).
+    """Encoder layer for new token features (NER, POS).
+
+    Converts token input from index form to embeddings or one-hot vectors.
+
     Args:
         num_tags (int): Number of tags to build embeddings on.
         embed_size (int): Size of embeddings.
         drop_prob (float): Probability of zero-ing out activations.
+        token_one_hot (bool): Whether to encode tokens as one-hot rather than embed.
     """
     def __init__(self, num_tags, embed_size=0, drop_prob=0., token_one_hot=False):
         super(TokenEncoder, self).__init__()
@@ -117,6 +121,29 @@ class TokenEncoder(nn.Module):
                     emb[i, j, x[i, j]] = 1
             """
             # -> (batch_size, seq_len, num_tags)
+
+        return emb
+
+
+class FeatureProjector(nn.Module):
+    """Layer to perform dropout and projection on added features only.
+
+    Performs dropout + projection on input vector. Trains jointly over
+    question and context for all features.
+
+    Args:
+        input_size (int): Total dimension of feature input.
+        hidden_size (int): Desired output dimension.
+        drop_prob (float): Probability of zero-ing out activations.
+    """
+    def __init__(self, input_size, hidden_size, drop_prob=0.):
+        super(FeatureProjector, self).__init__()
+        self.drop_prob = drop_prob
+        self.proj = nn.Linear(input_size, hidden_size, bias=False)
+
+    def forward(self, x):
+        emb = F.dropout(x, self.drop_prob, self.training)
+        emb = self.proj(emb)  # (batch_size, seq_len, hidden_size)
 
         return emb
 
