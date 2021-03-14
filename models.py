@@ -211,18 +211,18 @@ class BiDAF(nn.Module):
                     # If projecting one-hot features, project features before concat
                     c_feat = self.project(c_feat)
                     q_feat = self.project(q_feat)
-                    c_emb = torch.concat([c_emb, c_feat], dim=2)
-                    q_emb = torch.concat([q_emb, q_feat], dim=2)
+                    c_emb = torch.cat([c_emb, c_feat], dim=2)
+                    q_emb = torch.cat([q_emb, q_feat], dim=2)
                 else:
                     # If projecting raw index features, project features after concat
-                    c_emb = torch.concat([c_emb, c_feat], dim=2)
-                    q_emb = torch.concat([q_emb, q_feat], dim=2)
+                    c_emb = torch.cat([c_emb, c_feat], dim=2)
+                    q_emb = torch.cat([q_emb, q_feat], dim=2)
                     c_emb = self.project(c_emb)
                     q_emb = self.project(q_emb)
             else:
                 # If no projection, just concat and move on
-                c_emb = torch.concat([c_emb, c_feat], dim=2)
-                q_emb = torch.concat([q_emb, q_feat], dim=2)
+                c_emb = torch.cat([c_emb, c_feat], dim=2)
+                q_emb = torch.cat([q_emb, q_feat], dim=2)
             # -> final output: (batch_size, x_len, final_hidden_size)
 
         c_emb = self.hwy(c_emb)  # (batch_size, c_len, final_hidden_size)
