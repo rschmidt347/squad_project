@@ -162,7 +162,7 @@ def get_train_args():
 
     # Check RNN type and context/question features
     train_test_error_checker(args)
-    
+
     # Error handling for optimizer
     if args.model_optimizer not in ('Adadelta', 'Adamax'):
         raise ValueError(f'Unrecognized optimizer: "{args.model_optimizer}" - pick "Adadelta" or "Adamax"')
@@ -397,6 +397,11 @@ def add_train_test_args(parser):
                         type=lambda s: s.lower() in ('yes', 'y', 'true', 't', '1'),
                         default=False,
                         help='Whether to use projection when adding features')
+    # - Flag to one-hot-encode tokens
+    parser.add_argument('--token_one_hot',
+                        type=bool,
+                        default=False,
+                        help='Whether to append raw token index or convert to one-hot if using tokens.')
 
 
 def train_test_error_checker(args):
