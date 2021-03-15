@@ -103,10 +103,11 @@ class BiDAF(nn.Module):
         # - Flag to indicate projection
         self.use_projection = use_projection
         # - Flag to indicate legacy projection if one-hot encoding tokens
+        self.use_legacy_projection = use_legacy_projection
         if self.use_projection:
             # If projection, check for one-hot or not
             if self.token_one_hot:
-                if self.legacy_projection:
+                if self.use_legacy_projection:
                     # Project entire concatenated vector
                     self.project = nn.Linear(final_hidden_size + total_feature_size,
                                              final_hidden_size,
@@ -218,7 +219,7 @@ class BiDAF(nn.Module):
         if self.use_exact or self.use_token:
             if self.use_projection:
                 if self.token_one_hot:
-                    if self.legacy_projection:
+                    if self.use_legacy_projection:
                         # Project features after concat
                         c_emb = torch.cat([c_emb, c_feat], dim=2)
                         q_emb = torch.cat([q_emb, q_feat], dim=2)
