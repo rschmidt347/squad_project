@@ -35,7 +35,7 @@ parser.add_argument('--threshold',
 args = parser.parse_args()
 
 source_folder = './save/' + f'{args.split}' + '_submissions/'
-stats_file = f'{args.split}' + '_stats.csv'
+stats_file = 'sub_stats.csv'
 
 stats = pd.read_csv(stats_file)
 stats_sub = stats[(stats[args.metric_name] >= args.threshold) & (stats['TestName'] != 'none') &
@@ -60,6 +60,7 @@ for filename in glob.glob(source_folder + '*.csv'):
         data.append(df)
 
 df_all = pd.concat(data, axis=1)
+
 
 def get_pred(row):
     pred = row.loc[file_best_metric]
