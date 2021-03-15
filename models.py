@@ -248,8 +248,8 @@ class BiDAF(nn.Module):
                         c_feat = self.project(c_feat)
                         c_emb = torch.cat([c_emb, c_feat], dim=2)
                         if self.context_and_question:
-                            q_emb = torch.cat([q_emb, q_feat], dim=2)
                             q_feat = self.project(q_feat)
+                            q_emb = torch.cat([q_emb, q_feat], dim=2)
                 else:
                     # If projecting raw index features, always project features after concat
                     c_emb = torch.cat([c_emb, c_feat], dim=2)
