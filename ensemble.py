@@ -22,6 +22,15 @@ parser.add_argument('--file_to_omit',
                     type=str,
                     default='none',
                     help='Allow specification of file to omit')
+parser.add_argument('--metric_name',
+                    type=str,
+                    default='F1',
+                    choices=('EM', 'F1'),
+                    help='Name of metric to determine tie breaking')
+parser.add_argument('--threshold',
+                    type=int,
+                    default=65,
+                    help='Threshold for models to include in ensemble')
 
 args = parser.parse_args()
 
@@ -29,11 +38,13 @@ source_folder = './save/' + f'{args.split}' + '_submissions/'
 stats_file = f'{args.split}' + '_stats.csv'
 
 stats = pd.read_csv(stats_file)
-stats_sub = stats[(stats['F1'] >= 65) & (stats['TestName'] != 'none') & (stats['TestName'] != args.file_to_omit)]
-by_best_F1 = stats_sub.sort_values(by='F1', ascending=False)
-file_best_F1 = source_folder + by_best_F1['TestName'].iloc[0] + '.csv'
+stats_sub = stats[(stats[args.metric_name] >= args.threshold) & (stats['TestName'] != 'none') &
+                  (stats['TestName'] != args.file_to_omit)]
+by_best_metric = stats_sub.sort_values(by=args.metric_name, ascending=False)
+file_best_metric = source_folder + by_best_metric['TestName'].iloc[0] + '.csv'
 filenames = list(stats_sub['TestName'])
 filenames = [source_folder + file + '.csv' for file in filenames]
+print(filenames)
 
 data = []
 is_first_file = True
@@ -49,11 +60,9 @@ for filename in glob.glob(source_folder + '*.csv'):
         data.append(df)
 
 df_all = pd.concat(data, axis=1)
-preds_best_F1 = df_all[file_best_F1]
-
 
 def get_pred(row):
-    pred = row.loc[file_best_F1]
+    pred = row.loc[file_best_metric]
     counts = row.value_counts(dropna=False)
     top_count = counts[0]
     if top_count == 1:
