@@ -1,0 +1,60 @@
+[03.15.21 18:36:20] Args: {
+    "batch_size": 64,
+    "char_emb_file": "./data/char_emb.json",
+    "dev_eval_file": "./data/dev_eval.json",
+    "dev_qtok_eval_file": "./data/dev_qtok_eval.json",
+    "dev_qtok_record_file": "./data/dev_qtok_rec.npz",
+    "dev_record_file": "./data/dev.npz",
+    "dev_w_add_eval_file": "./data/dev_w_add_eval.json",
+    "dev_w_add_file": "./data/dev_w_spacy.json",
+    "dev_w_add_meta_file": "./data/dev_w_add_meta.json",
+    "dev_w_add_record_file": "./data/dev_w_add_rec.npz",
+    "ff_hidden_size": 50,
+    "hidden_size": 100,
+    "load_path": "save/train/all_feature_cq_proj_1hot-01/best.pth.tar",
+    "max_ans_len": 15,
+    "name": "all_feature_cq_proj_1hot",
+    "num_mod_layers": 2,
+    "num_visuals": 10,
+    "num_workers": 4,
+    "rnn_type": "LSTM",
+    "save_dir": "./save/test/all_feature_cq_proj_1hot-02",
+    "split": "dev",
+    "sub_file": "submission.csv",
+    "test_eval_file": "./data/test_eval.json",
+    "test_qtok_eval_file": "./data/test_qtok_eval.json",
+    "test_qtok_record_file": "./data/test_qtok_rec.npz",
+    "test_record_file": "./data/test.npz",
+    "test_w_add_eval_file": "./data/test_w_add_eval.json",
+    "test_w_add_file": "./data/test_w_spacy.json",
+    "test_w_add_meta_file": "./data/test_w_add_meta.json",
+    "test_w_add_record_file": "./data/test_w_add_rec.npz",
+    "token_embed_size": 0,
+    "token_one_hot": true,
+    "train_eval_file": "./data/train_eval.json",
+    "train_qtok_eval_file": "./data/train_qtok_eval.json",
+    "train_qtok_record_file": "./data/train_qtok_rec.npz",
+    "train_record_file": "./data/train.npz",
+    "train_w_add_eval_file": "./data/train_w_add_eval.json",
+    "train_w_add_file": "./data/train_w_spacy.json",
+    "train_w_add_record_file": "./data/train_w_add_rec.npz",
+    "use_char_embeddings": true,
+    "use_default_task_files": true,
+    "use_exact": "cq",
+    "use_legacy_projection": true,
+    "use_projection": true,
+    "use_squad_v2": true,
+    "use_token": "cq",
+    "word_emb_file": "./data/word_emb.json"
+}
+[03.15.21 18:36:20] Loading embeddings...
+[03.15.21 18:36:26] Building model...
+[03.15.21 18:36:26] Using context & question feature files based on provided input...
+[03.15.21 18:36:26] To manually specify files, set --use_default_task_files to False.
+[03.15.21 18:36:26] Projection enabled with one-hot tokens. Legacy projection is on.
+[03.15.21 18:36:26] Projection will be performed jointly on feature + word vector...
+[03.15.21 18:36:36] Loading checkpoint from save/train/all_feature_cq_proj_1hot-01/best.pth.tar...
+[03.15.21 18:36:37] Building dataset...
+[03.15.21 18:36:41] Evaluating on dev split...
+[03.15.21 18:36:50] Dev NLL: 02.64, F1: 66.17, EM: 62.91, AvNA: 71.92
+[03.15.21 18:36:50] Writing submission file to ./save/test/all_feature_cq_proj_1hot-02/dev_submission.csv...
