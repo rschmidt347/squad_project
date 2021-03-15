@@ -28,8 +28,8 @@ parser.add_argument('--metric_name',
                     choices=('EM', 'F1'),
                     help='Name of metric to determine tie breaking')
 parser.add_argument('--threshold',
-                    type=int,
-                    default=65,
+                    type=float,
+                    default=65.0,
                     help='Threshold for models to include in ensemble')
 
 args = parser.parse_args()
