@@ -55,17 +55,7 @@ def main(args):
         args, log = switch_to_default_files(args, log)
     # Log projection information based on args
     if args.use_projection:
-        if args.use_token:
-            if args.token_one_hot:
-                log.info("Projection enabled with one-hot tokens.")
-                log.info("Projection will be performed on token features separately from word embeddings.")
-                log.info(f"Projecting features to dimension: {args.ff_hidden_size}...")
-            else:
-                log.info("Projection enabled with raw index tokens.")
-                log.info("Projection will be performed jointly on feature + word vector...")
-        else:
-            log.info("Token features are not in use and projection is enabled for some reason.")
-            log.info("I don't imagine that this will yield meaningful results...")
+        args, log = projection_notifications(args, log)
 
     model = BiDAF(word_vectors=word_vectors,
                   char_vectors=char_vectors if args.use_char_embeddings else None,
@@ -78,7 +68,8 @@ def main(args):
                   token_embed_size=args.token_embed_size,
                   use_projection=args.use_projection,
                   token_one_hot=args.token_one_hot,
-                  final_feature_hidden_size=args.ff_hidden_size)
+                  final_feature_hidden_size=args.ff_hidden_size,
+                  use_legacy_projection=args.use_legacy_projection)
 
     model = nn.DataParallel(model, gpu_ids)
     log.info(f'Loading checkpoint from {args.load_path}...')
@@ -262,6 +253,28 @@ def switch_to_default_files(args, log):
             vars(args)[f'{data_split}_record_file'] = vars(args)[f'{data_split}' + '_qtok_record_file']
             # .json eval files
             vars(args)[f'{data_split}_eval_file'] = vars(args)[f'{data_split}' + '_qtok_eval_file']
+
+    return args, log
+
+
+def projection_notifications(args, log):
+    """Notify user of projection settings based on feature input."""
+    if args.use_projection:
+        if args.use_token:
+            if args.token_one_hot:
+                if args.use_legacy_projection:
+                    log.info("Projection enabled with one-hot tokens. Legacy projection is on.")
+                    log.info("Projection will be performed jointly on feature + word vector...")
+                else:
+                    log.info("Projection enabled with one-hot tokens.")
+                    log.info("Projection will be performed on token features separately from word embeddings.")
+                    log.info(f"Projecting features to dimension: {args.ff_hidden_size}...")
+            else:
+                log.info("Projection enabled with raw index tokens.")
+                log.info("Projection will be performed jointly on feature + word vector...")
+        else:
+            log.info("Token features are not in use and projection is enabled for some reason.")
+            log.info("I don't imagine that this will yield meaningful results...")
 
     return args, log
 

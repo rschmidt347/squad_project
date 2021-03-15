@@ -37,8 +37,9 @@ class BiDAF(nn.Module):
     def __init__(self, word_vectors, hidden_size,
                  drop_prob=0., rnn_type='LSTM', num_mod_layers=2, char_vectors=None,
                  use_token=False, use_exact=False, context_and_question=False,
-                 token_embed_size=0, use_projection=False, token_one_hot=False,
-                 final_feature_hidden_size=50, num_ner_tags=21, num_pos_tags=52):
+                 token_embed_size=0, token_one_hot=False,
+                 use_projection=False, use_legacy_projection=False, final_feature_hidden_size=50,
+                 num_ner_tags=21, num_pos_tags=52):
         super(BiDAF, self).__init__()
         # 0) Use character embeddings if fed into the BiDAF model
         self.use_char_embeddings = True if char_vectors is not None else False
@@ -99,16 +100,26 @@ class BiDAF(nn.Module):
         self.context_and_question = context_and_question
 
         # 4) Projection layer to decrease dimensions if extra features used
+        # - Flag to indicate projection
         self.use_projection = use_projection
+        # - Flag to indicate legacy projection if one-hot encoding tokens
+        self.use_legacy_projection = use_legacy_projection
         if self.use_projection:
             # If projection, check for one-hot or not
             if self.token_one_hot:
-                # If one-hot, project only the features
-                self.project = layers.FeatureProjector(input_size=total_feature_size,
-                                                       hidden_size=final_feature_hidden_size,
-                                                       drop_prob=drop_prob)
-                # Final hidden size increased by projection dimension
-                final_hidden_size += final_feature_hidden_size
+                if self.use_legacy_projection:
+                    # Project entire concatenated vector
+                    self.project = nn.Linear(final_hidden_size + total_feature_size,
+                                             final_hidden_size,
+                                             bias=False)
+                    # Final hidden size unchanged since projected down to match word+char level
+                else:
+                    # If one-hot, project only the features
+                    self.project = layers.FeatureProjector(input_size=total_feature_size,
+                                                           hidden_size=final_feature_hidden_size,
+                                                           drop_prob=drop_prob)
+                    # Final hidden size increased by projection dimension
+                    final_hidden_size += final_feature_hidden_size
             else:
                 # If raw features appended, project the combined vector
                 self.project = nn.Linear(final_hidden_size + total_feature_size,
@@ -208,13 +219,20 @@ class BiDAF(nn.Module):
         if self.use_exact or self.use_token:
             if self.use_projection:
                 if self.token_one_hot:
-                    # If projecting one-hot features, project features before concat
-                    c_feat = self.project(c_feat)
-                    q_feat = self.project(q_feat)
-                    c_emb = torch.cat([c_emb, c_feat], dim=2)
-                    q_emb = torch.cat([q_emb, q_feat], dim=2)
+                    if self.use_legacy_projection:
+                        # Project features after concat
+                        c_emb = torch.cat([c_emb, c_feat], dim=2)
+                        q_emb = torch.cat([q_emb, q_feat], dim=2)
+                        c_emb = self.project(c_emb)
+                        q_emb = self.project(q_emb)
+                    else:
+                        # Project features before concat
+                        c_feat = self.project(c_feat)
+                        q_feat = self.project(q_feat)
+                        c_emb = torch.cat([c_emb, c_feat], dim=2)
+                        q_emb = torch.cat([q_emb, q_feat], dim=2)
                 else:
-                    # If projecting raw index features, project features after concat
+                    # If projecting raw index features, always project features after concat
                     c_emb = torch.cat([c_emb, c_feat], dim=2)
                     q_emb = torch.cat([q_emb, q_feat], dim=2)
                     c_emb = self.project(c_emb)
