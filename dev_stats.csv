@@ -21,17 +21,3 @@ drqa_hyperparameters_no_proj-01,none,2.73,63.62,60.29,70.29
 gru_baseline-01,gru_baseline-01-best-01,3.06,60.91,57.65,67.99
 lstm_4-layer-01,lstm_4-layer-best-01,3.08,61.22,57.96,68.22
 word_and_char_embed-150-01,word_and_char_embed-150-01,3.97,62.26,58.39,69.89
-,,,,,
-,,,,,
-,,,,,
-,,,,,
-,,,,,
-,,,,,
-,,,,,
-,,,,,
-,,,,,
-,,,,,
-,,,,,
-,,,,,
-,,,,,
-,,,,,
