@@ -10,12 +10,17 @@ import torch.nn as nn
 
 
 class BiDAF(nn.Module):
-    """Baseline BiDAF model for SQuAD.
+    """BiDAF model for SQuAD 2.0. Builds on the provided baseline BiDAF model.
 
-    Based on the paper:
+    Based primarily on the papers:
     "Bidirectional Attention Flow for Machine Comprehension"
-    by Minjoon Seo, Aniruddha Kembhavi, Ali Farhadi, Hannaneh Hajishirzi
-    (https://arxiv.org/abs/1611.01603).
+        by Minjoon Seo, Aniruddha Kembhavi, Ali Farhadi, Hannaneh Hajishirzi
+        (https://arxiv.org/abs/1611.01603).
+        Architecture: BiDAF
+    "Reading Wikipedia to Answer Open-Domain Questions"
+        by Danqi Chen, Adam Fisch, Jason Weston, Antoine Bordes
+        (https://arxiv.org/pdf/1704.00051.pdf).
+        Architecture: DrQA reader
 
     Follows a high-level structure commonly found in SQuAD models:
         - Embedding layer: Embed word indices to get word vectors.
@@ -31,8 +36,20 @@ class BiDAF(nn.Module):
         rnn_type (str): RNN architecture used for encoder layer; one of 'LSTM' or 'GRU'.
         char_vectors (torch.Tensor): Pre-trained character vectors.
         use_token (bool): Flag for using token features (NER, POS)
-        token_embed_size (int): Size of embedding for NER/POS; 0 if using one-hot-encoding
-        use_exact (bool): Flag for using exact match features (original, uncased, lemma)
+        use_exact (bool): Flag for using exact match features (exact, uncased, lemma)-match
+        context_and_question (bool): Flag to indicate if features are used in both context & question.
+        token_embed_size (int): Size of embedding for NER/POS; 0 if using token only
+        token_one_hot (bool): Flag for whether token features should be one-hot encoded.
+        use_projection (bool): Flag to indicate whether projection should be performed on the...
+            ...concatenated feature+word vector dim indicated by final_feature_hidden_size.
+            Details of this operation are determined by the boolean flags.
+        use_legacy_projection (bool): If token_one_hot and use_projection are both true and this...
+            ...flag is turned on, then projection is performed on the entire concatenated vector...
+            ...of word vectors and features.
+        final_feature_hidden_size (int): Size of final feature vector if projecting one-hot tokens.
+        num_ner_tags (int): Number of NER tags for token features.
+        num_pos_tags (int): Number of POS tags for token features.
+
     """
     def __init__(self, word_vectors, hidden_size,
                  drop_prob=0., rnn_type='LSTM', num_mod_layers=2, char_vectors=None,
