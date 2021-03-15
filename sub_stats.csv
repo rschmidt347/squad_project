@@ -1,4 +1,5 @@
 ﻿TrainName,TestName,DevSub,TestSub,VM,DevNLL,F1,EM,AvNA
+all_features_cq_proj_1-hot_fancy-01,all_features_cq_proj_1-hot_fancy-01,yes,no,big,2.86,64.71,61.55,71.01
 all_feature_cq_proj_1hot-01,none,no,yes,big,2.64,66.17,62.91,71.92
 all_features_cq_no_proj_1hot-01,none,no,yes,big,2.58,66.61,63.47,72.22
 all_features_cq_noproj_drop4_1hot-01,none,no,no,big,0,0,0,0
@@ -21,3 +22,8 @@ drqa_hyperparameters_no_proj-01,none,no,no,small,2.73,63.62,60.29,70.29
 gru_baseline-01,gru_baseline-01-best-01,yes,no,small,3.06,60.91,57.65,67.99
 lstm_4-layer-01,lstm_4-layer-best-01,yes,no,small,3.08,61.22,57.96,68.22
 word_and_char_embed-150-01,word_and_char_embed-150-01,yes,no,small,3.97,62.26,58.39,69.89
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
