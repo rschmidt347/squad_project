@@ -407,6 +407,12 @@ def add_train_test_args(parser):
                         type=int,
                         default=50,
                         help='Final feature hidden size if projecting one-hot feature vectors.')
+    # - Flag for using legacy projection in one-hot case
+    parser.add_argument('--use_legacy_projection',
+                        type=bool,
+                        default=False,
+                        help="Whether to use legacy projection in one-hot case. \
+                         --token_one_hot and --use_projection must be enabled.")
 
 
 def train_test_error_checker(args):
