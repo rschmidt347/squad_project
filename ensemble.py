@@ -62,6 +62,7 @@ else:
 
 by_best_metric = stats_sub.sort_values(by=args.metric_name, ascending=False)
 file_best_metric = source_folder + by_best_metric['TestName'].iloc[0] + '.csv'
+file_2nd_best_metric = source_folder + by_best_metric['TestName'].iloc[1] + '.csv'
 filenames = list(stats_sub['TestName'])
 filenames = [source_folder + file + '.csv' for file in filenames]
 
@@ -83,6 +84,7 @@ df_all = pd.concat(data, axis=1)
 
 def get_pred(row):
     pred = row.loc[file_best_metric]
+    pred2 = row.loc[file_2nd_best_metric]
     counts = row.value_counts(dropna=False)
     top_count = counts[0]
     if top_count == 1:
@@ -90,6 +92,8 @@ def get_pred(row):
     top_preds = list(counts[counts == top_count].index)
     if pred in top_preds:
         return pred
+    if pred2 in top_preds:
+        return pred2
     return top_preds[0]
 
 
@@ -104,3 +108,6 @@ mod_file = source_folder + f'{args.out_dir}' + '/log.txt'
 with open(mod_file, 'w') as file_handler:
     for item in filenames:
         file_handler.write("{}\n".format(item))
+
+df_all_file = source_folder + f'{args.out_dir}' + '/df_all.csv'
+df_all.to_csv(df_all_file, index=False)
