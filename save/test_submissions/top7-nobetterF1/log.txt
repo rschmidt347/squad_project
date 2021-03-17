@@ -5,3 +5,6 @@
 ./save/test_submissions/ch_cont_all_ques_all-01.csv
 ./save/test_submissions/all_feature_cq_proj_1hot-01.csv
 ./save/test_submissions/char_all_add_feat-01.csv
+
+EM: 65.630 (+0.355) 
+F1: 68.630 (+0.297) 
