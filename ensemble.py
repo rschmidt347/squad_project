@@ -1,5 +1,8 @@
 """
 Generate ensemble submission by majority vote.
+
+Authors:
+    Brian Powell and Robert Schmidt
 """
 
 import argparse
@@ -41,13 +44,13 @@ parser.add_argument('--models_to_include',
                     help='Optional file specifying exact models to include')
 
 args = parser.parse_args()
-print(f'{args.out_dir}')
 
 source_folder = './save/' + f'{args.split}' + '_submissions/'
 stats_file = 'sub_stats.csv'
 
 stats = pd.read_csv(stats_file)
 
+# Either read in models to include in ensemble from provided txt file, or use metric and threshold
 mods_to_include = []
 if args.models_to_include is not None:
     filename = './save/' + f'{args.split}' + '_submissions/' + f'{args.models_to_include}'
@@ -60,12 +63,16 @@ else:
     stats_sub = stats[(stats[args.metric_name] >= args.threshold) & (stats['TestName'] != 'none') &
                       (stats['TestName'] != args.file_to_omit)]
 
+# Get best models by given metric for tie breaking
 by_best_metric = stats_sub.sort_values(by=args.metric_name, ascending=False)
 file_best_metric = source_folder + by_best_metric['TestName'].iloc[0] + '.csv'
 file_2nd_best_metric = source_folder + by_best_metric['TestName'].iloc[1] + '.csv'
+
+# Get list of filenames for for-loop
 filenames = list(stats_sub['TestName'])
 filenames = [source_folder + file + '.csv' for file in filenames]
 
+# Combine model outputs into one dataframe
 data = []
 is_first_file = True
 for filename in glob.glob(source_folder + '*.csv'):
@@ -78,10 +85,11 @@ for filename in glob.glob(source_folder + '*.csv'):
             df = df.rename(columns={'Predicted': filename})
             df = df[filename]
         data.append(df)
-
 df_all = pd.concat(data, axis=1)
 
 
+# Get best answer given question by majority vote
+# Break ties by favoring model with best F1 score
 def get_pred(row):
     pred = row.loc[file_best_metric]
     pred2 = row.loc[file_2nd_best_metric]
@@ -97,6 +105,7 @@ def get_pred(row):
     return top_preds[0]
 
 
+# Apply function above to each question
 preds = df_all.apply(get_pred, axis=1)
 d = {'Id': list(df_all['Id']), 'Predicted': preds.values}
 output = pd.DataFrame(data=d)
@@ -104,6 +113,7 @@ output = pd.DataFrame(data=d)
 out_file = source_folder + f'{args.out_dir}' + '/' + args.sub_file
 output.to_csv(out_file, index=False)
 
+# Keep log of models used in ensemble
 mod_file = source_folder + f'{args.out_dir}' + '/log.txt'
 with open(mod_file, 'w') as file_handler:
     for item in filenames:

@@ -2,6 +2,9 @@
 Add input features from spaCy tokenizer to output of setup.py
 by combining pre-processed data .txt file from DrQA script with
 original json SQuAD data.
+
+Authors:
+    Brian Powell and Robert Schmidt
 """
 import json
 import pandas as pd

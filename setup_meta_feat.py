@@ -1,5 +1,7 @@
 """
-Process file with additional features: lemma, NER, POS
+Process file with additional features: lemma, NER, POS for question and context.
+
+Adapted from original setup.py by Brian Powell and Robert Schmidt.
 """
 import ujson as json
 import numpy as np
