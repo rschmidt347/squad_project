@@ -4,4 +4,4 @@
 ./save/dev_submissions/char_all_add_feat-01.csv
 
 EM: 65.552 (-0.151) 
-F1: 68.549 (-0.173)
+F1: 68.541 (-0.173)

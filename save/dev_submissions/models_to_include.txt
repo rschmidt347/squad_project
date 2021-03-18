@@ -1,4 +1,4 @@
-all_feature_cq_with_proj-betterEM
+all_feature_cq_with_proj-betterF1
 all_features_cq_proj_large-01
 all_features_cq_no_proj_1hot-01
 all_features_cq_noproj_drop4_1hot-01

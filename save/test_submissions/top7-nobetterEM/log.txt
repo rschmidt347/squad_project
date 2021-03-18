@@ -1,8 +1,10 @@
-./save/test_submissions/all_feature_cq_with_proj-betterEM.csv
+./save/test_submissions/all_feature_cq_with_proj-betterF1.csv
 ./save/test_submissions/all_features_cq_proj_large-01.csv
+./save/test_submissions/all_features_cq_no_proj_1hot-01.csv
 ./save/test_submissions/all_features_cq_noproj_drop4_1hot-01.csv
 ./save/test_submissions/ch_cont_all_ques_all-01.csv
+./save/test_submissions/all_feature_cq_proj_1hot-01.csv
 ./save/test_submissions/char_all_add_feat-01.csv
 
-EM: 65.275 (+2.316) 
-F1: 68.333 (+2.141) 
+EM: 65.714 (+0.085) 
+F1: 68.753 (+0.123)

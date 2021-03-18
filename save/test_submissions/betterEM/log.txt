@@ -1,1 +1,4 @@
 ./save/test_submissions/all_feature_cq_with_proj-betterEM.csv
+
+EM: 62.959 (+62.959) 
+F1: 66.192 (+66.192) 

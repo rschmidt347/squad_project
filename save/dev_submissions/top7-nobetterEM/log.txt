@@ -1,0 +1,10 @@
+./save/dev_submissions/all_feature_cq_with_proj-betterF1.csv
+./save/dev_submissions/all_features_cq_proj_large-01.csv
+./save/dev_submissions/all_features_cq_no_proj_1hot-01.csv
+./save/dev_submissions/all_features_cq_noproj_drop4_1hot-01.csv
+./save/dev_submissions/ch_cont_all_ques_all-01.csv
+./save/dev_submissions/all_feature_cq_proj_1hot-01.csv
+./save/dev_submissions/char_all_add_feat-01.csv
+
+EM: 65.586 (-0.202) 
+F1: 68.543 (-0.265)
