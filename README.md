@@ -1,2 +1,7 @@
 # squad_project
-Final project for Stanford CS 224N (Winter 2021)
+
+This is the code repository for the project _SQuAD 2.0: Improving Performance with
+Optimization and Feature Engineering_ . 
+
+## Overview
+![Screenshot](imgs/encoding_diagram.png)
