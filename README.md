@@ -13,7 +13,7 @@ We set out to build a high-performing QA system for the Stanford Question Answer
 ### 1. First Steps
 The steps to set up the project environment and BiDAF baseline are found in `squad_setup.md`.
 
-### 2. Feature generation
+### 2. Generate features
 After downloading the SQuAD dataset, we generate tagged features for the input data. To do this, ...
 
 ### 3. Train the model
