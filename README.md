@@ -14,7 +14,8 @@ We set out to build a high-performing QA system for the Stanford Question Answer
 The steps to set up the project environment and BiDAF baseline are found in `squad_setup.md`.
 
 ### 2. Generate features
-After downloading the SQuAD dataset, we generate tagged features for the input data. To do this, ...
+After downloading the SQuAD dataset, we generate tagged features for the input data. Instructions are found in `setup_meta_feat.py` and
+`integrate_meta_feat.py`.
 
 ### 3. Train the model
 Details on the arguments available to our model are found in `args.py`. For example, to generate our best individual model, run:
@@ -29,4 +30,4 @@ To generate predictions for the held-out test SQuAD examples, run `test.py` by n
 model path with `--load_path`. Model args are the same as in step 3; the model will also default to the evaluation files generated with the necessary token inputs.
 
 ### 5. Ensembling
-To ensemble models, see the code in `ensemble.py` ...
+To ensemble models, see the code in `ensemble.py`.
